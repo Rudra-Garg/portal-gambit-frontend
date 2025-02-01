@@ -1,0 +1,80 @@
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.game-controls {
+  width: 100%;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.portal-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  background-color: #2196f3;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.portal-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.portal-button.active {
+  background-color: #f44336;
+}
+
+.portal-instructions {
+  margin-top: 10px;
+  color: #666;
+}
+
+.board-container {
+  width: 100%;
+  max-width: 600px;
+  aspect-ratio: 1;
+}
+
+.game-status {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+}
+
+.portal-square {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.piece-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+
+.portal-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 3px solid #2196f3;
+  border-radius: 50%;
+  opacity: 0.5;
+  z-index: 1;
+}
