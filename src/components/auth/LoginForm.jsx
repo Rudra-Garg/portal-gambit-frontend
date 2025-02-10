@@ -44,36 +44,47 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <h2 className="text-3xl font-bold text-center">Sign In</h2>
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+    <div className="h-screen flex justify-center items-center relative">
+         <video
+        autoPlay
+        loop
+        muted
+        className="absolute inset-0 w-full h-full object-cover"
+      >
+        <source src="/background.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
 
+      <div className="relative z-10 bg-black-500 bg-opacity-50 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-96">
+      <h1 className="p-3 text-4xl font-bold text-center blur-[0.5px]">
+          <span className="bg-gradient-to-r from-green-500 to-blue-600 inline-block text-transparent bg-clip-text">
+            PORTAL GAMBIT
+          </span>
+        </h1>
+       
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
+        
             <input
               type="email"
               id="email"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+               className="w-full bg-white py-2 px-3 mt-4 rounded focus:ring-2 focus:ring-green-400"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
+           
             <input
+             placeholder="Password"
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="w-full bg-white py-2 px-3 mt-4 rounded focus:ring-2 focus:ring-green-400"
               required
             />
           </div>
@@ -81,18 +92,18 @@ const LoginForm = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300"
+             className="w-full bg-gradient-to-r from-green-400 to-yellow-400 py-2 mt-4 rounded text-white font-bold hover:opacity-80 transition"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+
         </form>
 
         <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
+        
           <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+            <span className="p-2 px-5 text-white">Or continue with</span>
           </div>
         </div>
 
@@ -106,7 +117,7 @@ const LoginForm = () => {
           Sign in with Google
         </button>
 
-        <p className="text-center mt-4">
+        <p className="text-center mt-4 text-white">
           Don&#39;t have an account?{' '}
           <Link to="/signup" className="text-blue-600 hover:text-blue-800">
             Sign up
