@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { ref, push, get, update } from 'firebase/database';
 import { database } from '../firebase/config';
 import PortalChessGame from './game/PortalChessGame';
+import { initialBoardSetup } from './game/chessLogic';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -13,6 +14,8 @@ const Dashboard = () => {
     const [activeGame, setActiveGame] = useState(null);
     const [availableGames, setAvailableGames] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+
+    console.log('User:', user);
 
     const handleLogout = async () => {
         try {
@@ -27,7 +30,7 @@ const Dashboard = () => {
         setIsLoading(true);
         try {
             const gameRef = push(ref(database, 'games'), {
-                fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+                board: initialBoardSetup(),
                 portals: {},
                 current_turn: "white",
                 white_player: user.uid,
