@@ -1,213 +1,245 @@
-import { useState, useEffect } from 'react';
-import { Chess } from 'chess.js';
+import { useState, useCallback, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
-import { ref, onValue, update } from 'firebase/database';
+import { ref, update, onValue } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
+import { PortalChess } from './CustomChessEngine';
 import './PortalChessGame.css';
 
 const PortalChessGame = ({ gameId }) => {
-  const [game, setGame] = useState(new Chess());
-  const [gameState, setGameState] = useState(null);
-  const [selectedSquare, setSelectedSquare] = useState(null);
+  const [game, setGame] = useState(() => new PortalChess());
   const [portalMode, setPortalMode] = useState(false);
-  const [portals, setPortals] = useState({});
-  const { user, loading } = useAuth(); // Changed from currentUser to user
+  const [portalStart, setPortalStart] = useState(null);
+  const [selectedSquare, setSelectedSquare] = useState(null);
+  const { user } = useAuth();
+  const [gameState, setGameState] = useState(null);
 
   useEffect(() => {
-    if (!gameId || loading) return;
+    if (!gameId) return;
 
     const gameRef = ref(database, `games/${gameId}`);
     const unsubscribe = onValue(gameRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        console.log('Game State Data:', data);
-        console.log('Current User:', user?.uid);
-        console.log('White Player:', data.white_player);
-        console.log('Black Player:', data.black_player);
-        console.log('Current Turn:', data.current_turn);
-
         setGameState(data);
-        const newGame = new Chess();
-        newGame.load(data.fen);
-        setGame(newGame);
-        setPortals(data.portals || {});
+        try {
+          const newGame = new PortalChess();
+          
+          if (typeof data.fen === 'string') {
+            newGame.load(data.fen);
+          }
+          
+          // Ensure portals are properly set
+          newGame.portals = data.portals || {};
+          
+          // Force turn to match the game state
+          newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
+          
+          setGame(newGame);
+        } catch (error) {
+          console.error('Error initializing chess game:', error);
+        }
       }
     });
 
     return () => unsubscribe();
-  }, [gameId, user, loading]);
+  }, [gameId]);
 
   const isMyTurn = () => {
-    if (!gameState || !user) {
-      console.log('No game state or user not logged in');
-      return false;
-    }
-
-    // Determine player's color
-    const myColor = gameState.white_player === user.uid ? 'white' :
+    if (!gameState || !user) return false;
+    const myColor = gameState.white_player === user.uid ? 'white' : 
                    gameState.black_player === user.uid ? 'black' : null;
-
-    if (!myColor) {
-      console.log('User is not a player in this game');
-      return false;
-    }
-
-    const isMyMove = myColor === gameState.current_turn;
-    console.log('Turn Status:', {
-      myColor,
-      currentTurn: gameState.current_turn,
-      isMyMove
-    });
-
-    return isMyMove;
+    return myColor === gameState.current_turn;
   };
 
-  const onDrop = (sourceSquare, targetSquare) => {
-    if (!isMyTurn()) {
-      console.log('Not your turn!');
-      return false;
-    }
+  const makeMove = useCallback((sourceSquare, targetSquare) => {
+    if (!isMyTurn()) return false;
 
     try {
-      if (portals[sourceSquare]?.linkedTo) {
-        sourceSquare = portals[sourceSquare].linkedTo;
-      }
+      const newGame = new PortalChess(game.fen());
+      newGame.portals = { ...game.portals };
 
-      const move = game.move({
-        from: sourceSquare,
-        to: targetSquare,
-        promotion: 'q',
-      });
+      // Get all valid moves for the source square
+      const moves = newGame.moves({ square: sourceSquare, verbose: true });
+      
+      // Find if there's a portal move to the target square
+      const portalMove = moves.find(move => 
+        move.portal && 
+        move.to === targetSquare
+      );
+
+      let move;
+      if (portalMove) {
+        // For portal moves, we need to include the 'via' square
+        move = newGame.move({
+          from: sourceSquare,
+          to: targetSquare,
+          via: portalMove.via,
+          portal: true
+        });
+      } else {
+        // Regular move
+        move = newGame.move({
+          from: sourceSquare,
+          to: targetSquare,
+          promotion: 'q' // Default to queen for simplicity
+        });
+      }
 
       if (move) {
-        const newTurn = game.turn() === 'w' ? 'white' : 'black';
-        console.log('Making move, new turn:', newTurn);
+        // Clean up the move object to ensure no undefined values
+        const cleanMove = {
+          ...move,
+          captured: move.captured || null,  // Replace undefined with null
+          promotion: move.promotion || null,
+          // Include other essential move properties
+          from: move.from,
+          to: move.to,
+          piece: move.piece,
+          color: move.color,
+          flags: move.flags || '',
+          san: move.san || '',
+          via: move.via || null,
+          portal: move.portal || false
+        };
 
+        // Update game state in Firebase
+        const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
         update(ref(database, `games/${gameId}`), {
-          fen: game.fen(),
+          fen: newGame.fen(),
+          portals: newGame.portals,
           current_turn: newTurn,
-          lastMoveTime: Date.now()
+          lastMoveTime: Date.now(),
+          lastMove: cleanMove
         });
+        
+        // Update local game state
+        setGame(newGame);
         return true;
       }
+      return false;
     } catch (error) {
-      console.error('Invalid move:', error);
+      console.error('Error making move:', error);
+      return false;
     }
-    return false;
-  };
+  }, [game, gameState, gameId, isMyTurn]);
 
-  const onSquareClick = (square) => {
-    if (!portalMode || !isMyTurn()) return;
-
-    if (selectedSquare === null) {
-      setSelectedSquare(square);
-    } else {
-      const newPortals = {
-        ...portals,
-        [selectedSquare]: {
-          position: selectedSquare,
-          linkedTo: square
-        },
-        [square]: {
-          position: square,
-          linkedTo: selectedSquare
+  const handleSquareClick = (square) => {
+    console.log('Square clicked:', square);
+    console.log('Portal mode:', portalMode);
+    console.log('Selected square:', selectedSquare);
+    
+    if (!portalMode) {
+      if (!selectedSquare) {
+        const piece = game.get(square);
+        console.log('Piece at clicked square:', piece);
+        if (piece && piece.color === game.turn()) {
+          console.log('Valid piece selected, calculating moves');
+          const availableMoves = game.moves({ square, verbose: true });
+          console.log('Available moves:', availableMoves);
+          setSelectedSquare(square);
         }
-      };
+      } else {
+        console.log('Attempting move from', selectedSquare, 'to', square);
+        makeMove(selectedSquare, square);
+        setSelectedSquare(null);
+      }
+    } else {
+      // Portal placement logging
+      console.log('Portal placement - Start:', portalStart, 'Current:', square);
+      if (!portalStart) {
+        setPortalStart(square);
+      } else {
+        try {
+          console.log('Placing portal pair:', portalStart, square);
+          const newGame = new PortalChess(game.fen());
+          newGame.portals = { ...game.portals };
+          newGame.placePair(portalStart, square);
+          console.log('New portal configuration:', newGame.portals);
+          
+          // Update local game state first
+          setGame(newGame);
+          setPortalStart(null);
+          setPortalMode(false);
 
-      update(ref(database, `games/${gameId}/portals`), newPortals);
-      setSelectedSquare(null);
-      setPortalMode(false);
+          // Update Firebase with new game state
+          const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
+          update(ref(database, `games/${gameId}`), {
+            fen: newGame.fen(),
+            portals: newGame.portals,
+            current_turn: newTurn,
+            lastMoveTime: Date.now()
+          });
+        } catch (error) {
+          console.error('Portal placement error:', error);
+          alert('Maximum number of portals (3) reached!');
+          setPortalStart(null);
+          setPortalMode(false);
+        }
+      }
     }
   };
 
-  const customPieces = () => {
-    const pieces = {};
-    Object.keys(portals).forEach(square => {
-      pieces[square] = ({ piece }) => (
-        <div className="portal-square">
-          {piece && <div className="piece-container">{piece}</div>}
-          <div className="portal-indicator" />
-        </div>
-      );
-    });
-    return pieces;
-  };
-
-  const getGameStatus = () => {
-    if (loading) return 'Loading...';
-    if (!user) return 'Please sign in to play';
-    if (!gameState) return 'Game not found';
-
-    const isPlayer = [gameState.white_player, gameState.black_player].includes(user.uid);
-    if (!isPlayer) return 'You are observing this game';
-
-    if (gameState.status === 'waiting' || !gameState.black_player) {
-      return 'Waiting for opponent...';
-    }
-
-    if (gameState.status === 'active') {
-      return isMyTurn() ? 'Your turn' : "Opponent's turn";
-    }
-
-    return 'Game ended';
+  const customSquareStyles = {
+    ...Object.keys(game.portals).reduce((acc, square) => ({
+      ...acc,
+      [square]: {
+        background: 'radial-gradient(circle, #2196f3 0%, transparent 70%)',
+        borderRadius: '50%'
+      }
+    }), {}),
+    ...(portalStart ? {
+      [portalStart]: {
+        background: 'radial-gradient(circle, #4CAF50 0%, transparent 70%)',
+        borderRadius: '50%'
+      }
+    } : {}),
+    ...(selectedSquare ? {
+      [selectedSquare]: {
+        backgroundColor: 'rgba(255, 255, 0, 0.5)'
+      },
+      ...game.moves({ square: selectedSquare, verbose: true }).reduce((acc, move) => {
+        console.log('Move object:', move);
+        return {
+          ...acc,
+          [move.to]: {
+            background: move.portal 
+              ? move.captured
+                ? 'radial-gradient(circle, transparent 35%, rgba(33, 150, 243, 0.4) 36%, rgba(33, 150, 243, 0.4) 45%, transparent 46%)'
+                : 'radial-gradient(circle, rgba(33, 150, 243, 0.4) 0%, rgba(33, 150, 243, 0.4) 30%, transparent 31%)'
+              : move.captured
+                ? 'radial-gradient(circle, transparent 35%, rgba(0, 255, 0, 0.4) 36%, rgba(0, 255, 0, 0.4) 45%, transparent 46%)'
+                : 'radial-gradient(circle, rgba(0, 255, 0, 0.4) 0%, rgba(0, 255, 0, 0.4) 30%, transparent 31%)'
+          }
+        };
+      }, {})
+    } : {})
   };
 
   return (
-    <div className="game-container">
-      <div className="game-controls">
-        <button
+    <div className="portal-chess-container">
+      <div className="game-status">
+        {isMyTurn() ? "Your turn" : "Opponent's turn"}
+      </div>
+      <div className="board-container">
+        <Chessboard 
+          position={game.fen()}
+          onPieceDrop={(source, target) => makeMove(source, target)}
+          onSquareClick={handleSquareClick}
+          boardOrientation={gameState?.black_player === user?.uid ? 'black' : 'white'}
+          arePiecesDraggable={isMyTurn()}
+          customSquareStyles={customSquareStyles}
+        />
+      </div>
+      <div className="controls">
+        <button 
           onClick={() => setPortalMode(!portalMode)}
           className={`portal-button ${portalMode ? 'active' : ''}`}
           disabled={!isMyTurn()}
         >
           {portalMode ? 'Cancel Portal' : 'Place Portal'}
         </button>
-
-        {portalMode && (
-          <div className="portal-instructions">
-            Click two squares to create linked portals
-          </div>
-        )}
       </div>
-
-      <div className="board-container">
-        <Chessboard
-          position={game.fen()}
-          onPieceDrop={onDrop}
-          onSquareClick={onSquareClick}
-          customBoardStyle={{
-            borderRadius: '4px',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
-          }}
-          customPieces={customPieces()}
-        />
-      </div>
-
-      <div className="game-status">
-        {getGameStatus()}
-      </div>
-
-      {/* Debug information - you can remove this in production */}
-      {user && gameState && (
-        <div className="debug-info" style={{
-          fontSize: '12px',
-          color: '#666',
-          marginTop: '10px',
-          padding: '10px',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '4px'
-        }}>
-          <div>Player: {user.email}</div>
-          <div>Role: {
-            gameState.white_player === user.uid ? 'White' :
-            gameState.black_player === user.uid ? 'Black' :
-            'Observer'
-          }</div>
-          <div>Current Turn: {gameState.current_turn}</div>
-          <div>Game Status: {gameState.status}</div>
-        </div>
-      )}
     </div>
   );
 };
