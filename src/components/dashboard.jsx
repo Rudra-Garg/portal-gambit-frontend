@@ -36,7 +36,8 @@ const Dashboard = () => {
                 white_player: user.uid,
                 white_player_email: user.email,
                 status: "waiting",
-                created_at: Date.now()
+                created_at: Date.now(),
+                chat: {}
             });
             setActiveGame(gameRef.key);
         } catch (error) {
