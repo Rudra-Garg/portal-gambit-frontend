@@ -2,7 +2,7 @@ import {BrowserRouter as Router, Navigate, Route, Routes} from 'react-router-dom
 import {AuthProvider} from './contexts/AuthContext';
 import LoginForm from './components/auth/LoginForm';
 import PrivateRoute from './components/auth/PrivateRoute';
-import Dashboard from './components/Dashboard';
+import Dashboard from './components/dashboard.jsx';
 import SignupForm from './components/auth/SignupForm';
 
 const App = () => {
