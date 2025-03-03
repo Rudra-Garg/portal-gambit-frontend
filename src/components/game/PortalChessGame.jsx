@@ -22,12 +22,39 @@ const PortalChessGame = ({ gameId }) => {
   const [isMuted, setIsMuted] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected'); // 'disconnected', 'connecting', 'connected'
+  const [boardWidth, setBoardWidth] = useState(400);
   
   // Refs for voice chat
   const peerRef = useRef(null);
   const connectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const remoteAudioRef = useRef(null);
+
+  const [lostPieces, setLostPieces] = useState({
+    white: [], // White pieces lost (displayed under white player)
+    black: []  // Black pieces lost (displayed under black player)
+  });
+
+  //for board::
+  useEffect(() => {
+    const handleResize = () => {
+      const container = document.getElementById('board-container');
+      if (container) {
+        // Calculate the available height considering other elements
+        const availableHeight = window.innerHeight - 200; // Subtract height for player info and lost pieces
+        const availableWidth = container.clientWidth;
+        
+        // Use the smaller dimension to ensure square fits
+        const size = Math.min(availableHeight, availableWidth);
+        setBoardWidth(size);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    // Initial sizing
+    handleResize();
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!gameId) return;
@@ -51,6 +78,9 @@ const PortalChessGame = ({ gameId }) => {
           newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
           
           setGame(newGame);
+          updateMoveHistory();
+          updateLostPieces();
+          
         } catch (error) {
           console.error('Error initializing chess game:', error);
         }
@@ -140,23 +170,20 @@ const PortalChessGame = ({ gameId }) => {
 
   const makeMove = useCallback((sourceSquare, targetSquare) => {
     if (!isMyTurn()) return false;
-
+  
     try {
       const newGame = new PortalChess(game.fen());
       newGame.portals = { ...game.portals };
-
-      // Get all valid moves for the source square
+  
       const moves = newGame.moves({ square: sourceSquare, verbose: true });
-      
-      // Find if there's a portal move to the target square
+  
       const portalMove = moves.find(move => 
         move.portal && 
         move.to === targetSquare
       );
-
+  
       let move;
       if (portalMove) {
-        // For portal moves, we need to include the 'via' square
         move = newGame.move({
           from: sourceSquare,
           to: targetSquare,
@@ -164,21 +191,18 @@ const PortalChessGame = ({ gameId }) => {
           portal: true
         });
       } else {
-        // Regular move
         move = newGame.move({
           from: sourceSquare,
           to: targetSquare,
           promotion: 'q' // Default to queen for simplicity
         });
       }
-
+  
       if (move) {
-        // Clean up the move object to ensure no undefined values
         const cleanMove = {
           ...move,
-          captured: move.captured || null,  // Replace undefined with null
+          captured: move.captured || null,
           promotion: move.promotion || null,
-          // Include other essential move properties
           from: move.from,
           to: move.to,
           piece: move.piece,
@@ -188,8 +212,7 @@ const PortalChessGame = ({ gameId }) => {
           via: move.via || null,
           portal: move.portal || false
         };
-
-        // Update game state in Firebase
+  
         const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
         update(ref(database, `games/${gameId}`), {
           fen: newGame.fen(),
@@ -198,9 +221,14 @@ const PortalChessGame = ({ gameId }) => {
           lastMoveTime: Date.now(),
           lastMove: cleanMove
         });
-        
+  
         // Update local game state
         setGame(newGame);
+  
+        // Update move history and lost pieces after the move
+        updateMoveHistory();
+        updateLostPieces();
+  
         return true;
       }
       return false;
@@ -209,6 +237,15 @@ const PortalChessGame = ({ gameId }) => {
       return false;
     }
   }, [game, gameState, gameId, isMyTurn]);
+  
+  // Update move history after loading game state from Firebase
+  useEffect(() => {
+    if (gameState) {
+      updateMoveHistory();
+      updateLostPieces();
+    }
+  }, [gameState]);
+  
 
   const handleSquareClick = (square) => {
     console.log('Square clicked:', square);
@@ -437,24 +474,274 @@ const PortalChessGame = ({ gameId }) => {
     } : {})
   };
 
-  return (
-    <div className="portal-chess-container">
-      <div className="game-status">
-        {isMyTurn() ? "Your turn" : "Opponent's turn"}
+
+
+  //updating ui
+  const [moveHistory, setMoveHistory] = useState([]);
+
+
+
+  const updateLostPieces = () => {
+    // Get current position
+    const fen = game.fen();
+    const position = fen.split(' ')[0];
+    
+    // Count all pieces in the position
+    const pieceCounts = {
+      'p': 8, 'n': 2, 'b': 2, 'r': 2, 'q': 1, 'k': 1,
+      'P': 8, 'N': 2, 'B': 2, 'R': 2, 'Q': 1, 'K': 1
+    };
+    
+    // Reduce the count for pieces still on the board
+    for (let char of position) {
+      if (pieceCounts[char] !== undefined) {
+        pieceCounts[char]--;
+      }
+    }
+    
+    // Group lost pieces by type with counts
+    const whiteLostCounts = {};
+    const blackLostCounts = {};
+    
+    // Count lost pieces by type
+    for (let piece in pieceCounts) {
+      const count = pieceCounts[piece];
+      if (piece === piece.toUpperCase() && count > 0) {
+        // White pieces lost
+        whiteLostCounts[piece] = count;
+      } else if (piece === piece.toLowerCase() && count > 0) {
+        // Black pieces lost
+        blackLostCounts[piece] = count;
+      }
+    }
+    
+    // Convert to arrays with proper sorting
+    const whiteLost = Object.keys(whiteLostCounts).map(piece => ({
+      type: piece,
+      count: whiteLostCounts[piece],
+      value: getPieceValue(piece)
+    }));
+    
+    const blackLost = Object.keys(blackLostCounts).map(piece => ({
+      type: piece,
+      count: blackLostCounts[piece],
+      value: getPieceValue(piece)
+    }));
+    
+    // Sort by value (highest first)
+    whiteLost.sort((a, b) => b.value - a.value);
+    blackLost.sort((a, b) => b.value - a.value);
+    
+    setLostPieces({
+      white: whiteLost,
+      black: blackLost
+    });
+
+  };
+
+  const getPieceValue = (piece) => {
+    const values = {
+      'p': 1, 'n': 3, 'b': 3, 'r': 5, 'q': 9, 'k': 0,
+      'P': 1, 'N': 3, 'B': 3, 'R': 5, 'Q': 9, 'K': 0
+    };
+    return values[piece] || 0;
+  };
+  
+
+  const updateMoveHistory = () => {
+    const history = game.history({ verbose: true });
+    setMoveHistory(history);
+  };
+  
+  const pieceSymbols = {
+    'p': '♟', 'n': '♞', 'b': '♝', 'r': '♜', 'q': '♛', 'k': '♚',
+    'P': '♙', 'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'
+  };
+  
+
+  const renderPieceWithCounter = (pieceData) => {
+    return (
+      <div key={pieceData.type} className="flex items-center mr-2">
+        <span className="text-lg">{pieceSymbols[pieceData.type]}</span>
+        {pieceData.count > 1 && (
+          <span className="text-xs font-medium ml-1">x{pieceData.count}</span>
+        )}
       </div>
-      <div className="game-board-chat-container">
-        <div className="board-container">
+    );
+  };
+
+
+
+
+
+  return (
+    <div className="portal-chess-container flex flex-col md:flex-row w-full h-screen">
+      {/* <div className="game-status">
+        {isMyTurn() ? "Your turn" : "Opponent's turn"}
+      </div> */}
+      
+     
+      <div className="w-full md:w-1/2 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-2 flex flex-col h-full max-h-screen overflow-hidden shadow-lg border border-purple-200">
+       {/* Player 1 info (Black) - Reduced padding and more compact design */}
+  <div className="bg-white p-1 rounded-lg shadow-md mb-1 flex flex-col border border-gray-100">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <div className="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full mr-2 shadow-inner flex items-center justify-center text-white font-bold text-xs">
+          O2
+        </div>
+        <div className="font-semibold text-gray-800 text-sm">OPPONENT 2</div>
+        <div className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full">
+        <div className="mr-1 text-xs text-gray-600 font-medium">X / X / X</div>
+      </div>
+      </div>
+      <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
+        <div className="font-bold text-gray-800 text-xs">XX:XX</div>
+      </div>
+    </div>
+    
+    {/* Lost pieces section with more compact styling */}
+    <div className="mt-1 flex items-center">
+      <div className="flex flex-wrap min-h-[28px] bg-gray-50 rounded-md p-1 w-full">
+        {lostPieces.black.length > 0 ? 
+          lostPieces.black.map(piece => renderPieceWithCounter(piece)) : 
+          <span className="text-gray-300 text-xs italic px-1">No pieces</span>
+        }
+      </div>
+    </div>
+  </div>
+      
+  {/* Chessboard - with flex-grow to use available space but capped height */}
+
+      <div className="flex-grow flex items-center justify-center mb-1 overflow-hidden" id="board-container">
+        <div className="board-container" style={{ 
+      width: boardWidth, 
+      maxWidth: '100%',
+      maxHeight: 'calc(100vh - 200px)' // Dynamically calculate max height
+    }}>
           <Chessboard 
             position={game.fen()}
             onPieceDrop={(source, target) => makeMove(source, target)}
             onSquareClick={handleSquareClick}
             boardOrientation={gameState?.black_player === user?.uid ? 'black' : 'white'}
             arePiecesDraggable={isMyTurn()}
+            customBoardStyle={{
+              borderRadius: '4px',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
+            }}
             customSquareStyles={customSquareStyles}
+            customDarkSquareStyle={{ backgroundColor: '#b0b6d8' }}
+        customLightSquareStyle={{ backgroundColor: '#e6e9f5' }}
           />
         </div>
+        </div>
+          {/* Player 2 info (White) - Reduced padding and more compact design */}
+  <div className="bg-white p-1 rounded-lg shadow-md mb-1 flex flex-col border border-gray-100">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <div className="w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full mr-2 shadow-inner flex items-center justify-center text-white font-bold text-xs">
+          O1
+        </div>
+        <div className="font-semibold text-gray-800 text-sm">OPPONENT 1</div>
+        <div className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full">
+        <div className="mr-1 text-xs text-gray-600 font-medium">X / X / X</div>
+      </div>
+      </div>
+      <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
+        <div className="font-bold text-gray-800 text-xs">XX:XX</div>
+      </div>
+    </div>
+    
+    {/* Lost pieces section with more compact styling */}
+    <div className="mt-1 flex items-center">
+      <div className="flex flex-wrap min-h-[28px] bg-gray-50 rounded-md p-1 w-full">
+        {lostPieces.white.length > 0 ? 
+          lostPieces.white.map(piece => renderPieceWithCounter(piece)) : 
+          <span className="text-gray-300 text-xs italic px-1">No pieces</span>
+        }
+      </div>
+    </div>
+  </div>
+        </div>
+
+     {/* Right side - Game log and controls */}
+     <div className="w-full md:w-1/2 bg-green-400 p-2 flex flex-col h-full">
+       {/* game history */}
+       <div className="bg-gradient-to-b from-gray-50 to-gray-100 flex-grow mb-2 rounded-lg border border-gray-200 shadow-inner flex flex-col" style={{ maxHeight: "471.48px" }}>
+  {/* Header with date and user info */}
+  <div className="flex justify-between items-center p-2 border-b border-gray-200 flex-shrink-0">
+    <div className="flex items-center">
+      <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold mr-2">
+        {"dev-rahul-1".substring(0, 2).toUpperCase()}
+      </div>
+      <h3 className="text-sm font-medium text-gray-800">{"dev-rahul-1"}</h3>
+    </div>
+    <div className="text-xs text-gray-500">
+      2025-03-02 10:03:20 UTC
+    </div>
+  </div>
+  
+  {/* Move history section with scrolling */}
+  <div className="overflow-y-auto p-2 flex-grow" style={{ minHeight: "0px" }}>
+    {moveHistory.length === 0 ? (
+      <div className="flex items-center justify-center h-full text-gray-400 italic text-sm">
+        No moves yet. Game will start soon.
+      </div>
+    ) : (
+      <div className="space-y-1.5">
+        {/* Game start indicator */}
+        <div className="flex justify-center mb-2">
+          <div className="bg-gray-200 text-gray-600 rounded-full px-3 py-0.5 text-xs">
+            Game started
+          </div>
+        </div>
         
-        <div className="chat-container">
+        {/* Actual move history */}
+        {moveHistory.map((move, index) => {
+          const isPlayer1 = index % 2 === 0;
+          return (
+            <div key={index} className="flex items-center">
+              <div className="w-16 text-xs text-gray-500 flex-shrink-0">
+                {Math.floor(index/2) + 1}.{isPlayer1 ? '' : '..'}
+              </div>
+              <div className={`px-2 py-1 rounded ${
+                isPlayer1 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : 'bg-purple-100 text-purple-800'
+              } text-sm flex-grow`}>
+                {move.piece.toUpperCase() + move.from + move.to}
+                {move.captured ? 
+                  <span className="font-medium text-red-600"> x{move.captured.toUpperCase()}</span> 
+                  : ''}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+  
+  {/* Footer with action buttons */}
+  <div className="p-2 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+    <button 
+        onClick={() => setPortalMode(!portalMode)}
+        className={`portal-button ${portalMode ? 'active' : ''} bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center`}
+
+        disabled={!isMyTurn()}
+      >
+        {portalMode ? 'Cancel Portal' : 'Place Portal'}
+    </button>
+    <button 
+      className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+      </svg>
+      Leave Game
+    </button>
+  </div>
+</div>
+        {/* chat history */}
+        <div className="chat-container ">
           <div className="chat-header">
             <h3>Game Chat</h3>
             <div className="voice-chat-controls">
@@ -513,16 +800,11 @@ const PortalChessGame = ({ gameId }) => {
           {/* Hidden audio element for remote stream */}
           <audio ref={remoteAudioRef} autoPlay playsInline hidden />
         </div>
-      </div>
-      <div className="controls">
-        <button 
-          onClick={() => setPortalMode(!portalMode)}
-          className={`portal-button ${portalMode ? 'active' : ''}`}
-          disabled={!isMyTurn()}
-        >
-          {portalMode ? 'Cancel Portal' : 'Place Portal'}
-        </button>
-      </div>
+
+        {/*chat end */}
+</div>
+
+  
     </div>
   );
 };

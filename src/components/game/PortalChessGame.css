@@ -79,13 +79,13 @@
   z-index: 1;
 }
 
-.portal-chess-container {
+/* .portal-chess-container {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 20px;
   padding: 20px;
-}
+} */
 
 .controls {
   display: flex;
@@ -136,11 +136,11 @@
   margin-bottom: 20px;
 }
 
-.board-container {
+/* .board-container {
   flex: 1;
   min-width: 300px;
   max-width: 600px;
-}
+} */
 
 .chat-container {
   flex: 1;
