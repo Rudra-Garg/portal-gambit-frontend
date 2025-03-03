@@ -17,6 +17,12 @@ const PortalChessGame = ({ gameId }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   
+  // Timer states
+  const [whiteTime, setWhiteTime] = useState(10 * 60); // 10 minutes in seconds
+  const [blackTime, setBlackTime] = useState(10 * 60); // 10 minutes in seconds
+  const [timerActive, setTimerActive] = useState(false);
+  const timerIntervalRef = useRef(null);
+  
   // Voice chat states
   const [voiceChatEnabled, setVoiceChatEnabled] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -34,6 +40,74 @@ const PortalChessGame = ({ gameId }) => {
     white: [], // White pieces lost (displayed under white player)
     black: []  // Black pieces lost (displayed under black player)
   });
+
+  // Format time as MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Timer logic
+  useEffect(() => {
+    if (!gameState || !timerActive) return;
+    
+    // Clear any existing timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    
+    // Set up timer that ticks every second
+    timerIntervalRef.current = setInterval(() => {
+      if (gameState.current_turn === 'white') {
+        setWhiteTime(prevTime => {
+          const newTime = prevTime - 1;
+          // Update Firebase with new time
+          update(ref(database, `games/${gameId}`), {
+            whiteTime: newTime
+          });
+          return newTime;
+        });
+      } else {
+        setBlackTime(prevTime => {
+          const newTime = prevTime - 1;
+          // Update Firebase with new time
+          update(ref(database, `games/${gameId}`), {
+            blackTime: newTime
+          });
+          return newTime;
+        });
+      }
+    }, 1000);
+    
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [gameState, timerActive, gameId]);
+
+  // Check for time out
+  useEffect(() => {
+    if (whiteTime <= 0 || blackTime <= 0) {
+      // Handle game over due to time out
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        setTimerActive(false);
+      }
+      
+      // Update game status in Firebase
+      const winner = whiteTime <= 0 ? 'black' : 'white';
+      update(ref(database, `games/${gameId}`), {
+        status: 'completed',
+        winner: winner,
+        winReason: 'timeout'
+      });
+      
+      // You could show an alert or modal here
+      alert(`Game over! ${winner} wins by timeout.`);
+    }
+  }, [whiteTime, blackTime, gameId]);
 
   //for board::
   useEffect(() => {
@@ -80,6 +154,19 @@ const PortalChessGame = ({ gameId }) => {
           setGame(newGame);
           updateMoveHistory();
           updateLostPieces();
+          
+          // Update timers from Firebase if they exist
+          if (data.whiteTime !== undefined) {
+            setWhiteTime(data.whiteTime);
+          }
+          if (data.blackTime !== undefined) {
+            setBlackTime(data.blackTime);
+          }
+          
+          // Start the timer if the game has started
+          if (data.status === 'active' && !timerActive) {
+            setTimerActive(true);
+          }
           
         } catch (error) {
           console.error('Error initializing chess game:', error);
@@ -158,6 +245,11 @@ const PortalChessGame = ({ gameId }) => {
         peerRef.current.destroy();
         peerRef.current = null;
       }
+      
+      // Clear timer interval
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
     };
   }, []);
 
@@ -214,12 +306,19 @@ const PortalChessGame = ({ gameId }) => {
         };
   
         const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
+        
+        // Make sure the timer is active
+        if (!timerActive) {
+          setTimerActive(true);
+        }
+        
         update(ref(database, `games/${gameId}`), {
           fen: newGame.fen(),
           portals: newGame.portals,
           current_turn: newTurn,
           lastMoveTime: Date.now(),
-          lastMove: cleanMove
+          lastMove: cleanMove,
+          status: 'active'
         });
   
         // Update local game state
@@ -236,7 +335,7 @@ const PortalChessGame = ({ gameId }) => {
       console.error('Error making move:', error);
       return false;
     }
-  }, [game, gameState, gameId, isMyTurn]);
+  }, [game, gameState, gameId, isMyTurn, timerActive]);
   
   // Update move history after loading game state from Firebase
   useEffect(() => {
@@ -571,9 +670,6 @@ const PortalChessGame = ({ gameId }) => {
   };
 
 
-
-
-
   return (
     <div className="portal-chess-container flex flex-col md:flex-row w-full h-screen">
       {/* <div className="game-status">
@@ -594,8 +690,12 @@ const PortalChessGame = ({ gameId }) => {
         <div className="mr-1 text-xs text-gray-600 font-medium">X / X / X</div>
       </div>
       </div>
-      <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
-        <div className="font-bold text-gray-800 text-xs">XX:XX</div>
+      <div className={`flex items-center px-4 py-1 rounded-full ${
+        gameState?.current_turn === 'black' 
+          ? 'bg-green-50 text-green-700' 
+          : 'bg-gray-50 text-gray-700'
+      }`}>
+        <div className="font-bold text-xs">{formatTime(blackTime)}</div>
       </div>
     </div>
     
@@ -646,8 +746,12 @@ const PortalChessGame = ({ gameId }) => {
         <div className="mr-1 text-xs text-gray-600 font-medium">X / X / X</div>
       </div>
       </div>
-      <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
-        <div className="font-bold text-gray-800 text-xs">XX:XX</div>
+      <div className={`flex items-center px-4 py-1 rounded-full ${
+        gameState?.current_turn === 'white' 
+          ? 'bg-green-50 text-green-700' 
+          : 'bg-gray-50 text-gray-700'
+      }`}>
+        <div className="font-bold text-xs">{formatTime(whiteTime)}</div>
       </div>
     </div>
     
