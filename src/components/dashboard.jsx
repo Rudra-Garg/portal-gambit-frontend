@@ -26,6 +26,10 @@ const Dashboard = () => {
         }
     };
 
+    const navigateToProfile = () => {
+        navigate(`/profile/${user.uid}`);
+    };
+    
     const createNewGame = async () => {
         setIsLoading(true);
         try {
@@ -87,12 +91,20 @@ const Dashboard = () => {
                 <div className="bg-white rounded-lg shadow p-6">
                     <div className="flex justify-between items-center mb-6">
                         <h1 className="text-2xl font-bold">Portal Chess</h1>
-                        <button
-                            onClick={handleLogout}
-                            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                        >
-                            Logout
-                        </button>
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={navigateToProfile}
+                                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                                View Profile
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                                Logout
+                            </button>
+                        </div>
                     </div>
                     <div className="mb-4">
                         <p className="text-gray-600">Welcome, {user?.email}</p>
