@@ -1,463 +1,394 @@
 /* ProfilePage.css */
-.profile-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    color: #333;
-  }
-  
-  /* Profile Header */
-  .profile-header {
-    position: relative;
-    background-color: #fff;
-    padding-bottom: 20px;
-  }
-  
-  .profile-cover {
-    height: 200px;
-    background: linear-gradient(135deg, #6e45e2, #88d3ce);
-    position: relative;
-  }
-  
-  .profile-avatar {
-    position: absolute;
-    left: 30px;
-    top: 130px;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 4px solid white;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    background-color: #ddd;
-  }
-  
-  .profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  .status-indicator {
-    position: absolute;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 3px solid white;
-    bottom: 5px;
-    right: 5px;
-  }
-  
-  .status-indicator.online {
-    background-color: #10b981;
-  }
-  
-  .status-indicator.in-game {
-    background-color: #3b82f6;
-  }
-  
-  .status-indicator.idle {
-    background-color: #f59e0b;
-  }
-  
-  .status-indicator.offline {
-    background-color: #6b7280;
-  }
-  
-  .profile-info {
-    margin-left: 170px;
-    padding: 20px 30px;
-  }
-  
-  .profile-info h1 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 700;
-    color: #1e293b;
-  }
-  
-  .profile-meta {
-    display: flex;
-    gap: 15px;
-    margin: 8px 0;
-    font-size: 14px;
-    color: #64748b;
-  }
-  
-  .player-level {
-    font-weight: 600;
-    color: #6e45e2;
-  }
-  
-  .xp-bar-container {
-    margin-top: 10px;
-    height: 8px;
-    background-color: #e2e8f0;
-    border-radius: 4px;
-    position: relative;
-    width: 100%;
-    max-width: 300px;
-  }
-  
-  .xp-bar {
-    height: 100%;
-    background: linear-gradient(90deg, #6e45e2, #88d3ce);
-    border-radius: 4px;
-  }
-  
-  .xp-text {
-    position: absolute;
-    top: -20px;
-    right: 0;
-    font-size: 12px;
-    color: #64748b;
-  }
-  
-  /* Navigation */
-  .profile-navigation {
-    display: flex;
-    background-color: #fff;
-    border-bottom: 1px solid #e2e8f0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  
-  .profile-navigation::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .profile-navigation button {
-    padding: 15px 25px;
-    background: none;
-    border: none;
-    font-size: 16px;
-    font-weight: 500;
-    color: #64748b;
-    cursor: pointer;
-    position: relative;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-  }
-  
-  .profile-navigation button.active {
-    color: #6e45e2;
-  }
-  
-  .profile-navigation button.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background-color: #6e45e2;
-  }
-  
-  .profile-navigation button:hover:not(.active) {
-    color: #1e293b;
-    background-color: #f1f5f9;
-  }
-  
-  /* Profile Content */
-  .profile-content {
-    padding: 30px;
-    background-color: #f8f9fa;
-  }
-  
-  /* Match History */
-  .match-history h3,
-  .stats-container h3,
- 
-  .friends-container h3,
-  .activity-container h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    font-size: 22px;
-    font-weight: 600;
-    color: #1e293b;
-  }
-  
-  .matches-list {
-    display: grid;
-    gap: 15px;
-  }
-  
-  .match-card {
-    background-color: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  
-  .match-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .match-card.victory {
-    border-left: 4px solid #10b981;
-  }
-  
-  .match-card.defeat {
-    border-left: 4px solid #ef4444;
-  }
-  
-  .match-card.draw {
-    border-left: 4px solid #f59e0b;
-  }
-  
-  .match-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 15px;
-    background-color: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  
-  .match-mode {
-    font-weight: 500;
-    color: #475569;
-  }
-  
-  .match-result {
-    font-weight: 600;
-  }
-  
-  .match-card.victory .match-result {
-    color: #10b981;
-  }
-  
-  .match-card.defeat .match-result {
-    color: #ef4444;
-  }
-  
-  .match-card.draw .match-result {
-    color: #f59e0b;
-  }
-  
-  .match-details {
-    padding: 15px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .match-info {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .match-map {
-    font-weight: 500;
-    color: #1e293b;
-  }
-  
-  .match-date {
-    font-size: 14px;
-    color: #64748b;
-  }
-  
-  .match-stats {
-    display: flex;
-    gap: 20px;
-    position: relative;
-  }
-  
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .stat-label {
-    font-size: 12px;
-    color: #64748b;
-    margin-bottom: 4px;
-  }
-  
-  .stat-value {
-    font-weight: 600;
-    color: #1e293b;
-  }
-  
-  .mvp-badge {
-    position: absolute;
-    top: -8px;
-    right: -8px;
-    background-color: #eab308;
-    color: white;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 12px;
-  }
-  
-  /* Stats */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-  }
-  
-  .stat-box {
-    background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  
-  .stat-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .stat-box .stat-value {
-    font-size: 24px;
-    font-weight: 700;
-    color: #6e45e2;
-    margin-bottom: 8px;
-  }
-  
-  .stat-box .stat-label {
-    font-size: 14px;
-    color: #64748b;
-  }
-  
- 
-  /* Friends */
-  .friends-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-  }
-  
-  .friend-card {
-    background-color: white;
-    border-radius: 8px;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-  
-  .friend-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
-  
-  .friend-avatar {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    overflow: hidden;
-  }
-  
-  .friend-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  
-  .friend-avatar .status-indicator {
-    width: 14px;
-    height: 14px;
-    border: 2px solid white;
-  }
-  
-  .friend-info {
-    flex: 1;
-  }
-  
-  .friend-info h4 {
-    margin: 0 0 5px;
-    font-weight: 600;
-    color: #1e293b;
-  }
-  
-  .friend-level {
-    font-size: 12px;
-    color: #64748b;
-    margin-right: 10px;
-  }
-  
-  .friend-status {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    display: inline-block;
-  }
-  
-  .friend-status.online {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-  }
-  
-  .friend-status.in-game {
-    background-color: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-  }
-  
-  .friend-status.idle {
-    background-color: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-  }
-  
-  .friend-status.offline {
-    background-color: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
-  }
-  
-  
-    /* Loading state */
-  .profile-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 300px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(110, 69, 226, 0.1);
-    border-radius: 50%;
-    border-top-color: #6e45e2;
-    animation: spin 1s ease-in-out infinite;
-    margin-bottom: 15px;
-  }
-  
-  @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  .profile-loading p {
-    color: #64748b;
-    font-size: 16px;
-  }
-  
-  .profile-error {
-    padding: 30px;
-    text-align: center;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    color: #ef4444;
-  }
+:root {
+  --bg-dark: #1A1A2E;
+  --bg-medium: #16213E;
+  --bg-light: #0F3460;
+  --accent-purple: #6C63FF;
+  --accent-light-purple: #8A7FFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B8B8B8;
+  --highlight-green: #4CAF50;
+  --highlight-yellow: #FFC107;
+  --highlight-red: #F44336;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Arial', sans-serif;
+  perspective: 1500px;
+  overflow-x: hidden;
+}
+
+.profile-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+}
+
+/* Enhanced Tilt Hover Effect */
+.profile-block, 
+.match-history-block, 
+.game-setup-block, 
+.additional-block {
+  background-color: var(--bg-medium);
+  border-radius: 12px;
+  padding: 25px;
+  transition: 
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
+  position: relative;
+  backface-visibility: hidden;
+  border: 1px solid var(--bg-light);
+}
+
+.profile-block:hover,
+.match-history-block:hover,
+.game-setup-block:hover,
+.additional-block:hover {
+  transform: 
+    perspective(1000px) 
+    rotateX(7deg) 
+    rotateY(-7deg) 
+    translateZ(50px) 
+    scale(1.05);
+  box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+.match-history-block:hover {
+  transform: 
+    perspective(1000px) 
+    rotateX(-7deg) 
+    rotateY(7deg) 
+    translateZ(50px) 
+    scale(1.05);
+}
+
+.game-setup-block:hover {
+  transform: 
+    perspective(1000px) 
+    rotateX(5deg) 
+    rotateY(5deg) 
+    translateZ(50px) 
+    scale(1.05);
+}
+
+.additional-block:hover {
+  transform: 
+    perspective(1000px) 
+    rotateX(-5deg) 
+    rotateY(5deg) 
+    translateZ(50px) 
+    scale(1.05);
+}
+
+/* Enhanced Headings */
+.profile-block h2,
+.match-history-block h2,
+.game-setup-block h2,
+.additional-block h2 {
+  position: relative;
+  font-size: 1.4rem;
+  color: var(--accent-purple);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: inline-block;
+}
+
+.profile-block h2::after,
+.match-history-block h2::after,
+.game-setup-block h2::after,
+.additional-block h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: var(--accent-purple);
+  transition: width 0.3s ease;
+}
+
+.profile-block h2:hover::after,
+.match-history-block h2:hover::after,
+.game-setup-block h2:hover::after,
+.additional-block h2:hover::after {
+  width: 100%;
+}
+
+/* Profile Block */
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-right: 20px;
+  border: 3px solid var(--accent-purple);
+  transition: transform 0.3s ease;
+}
+
+.profile-avatar:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Game Stats */
+.game-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.game-stat-item {
+  background-color: var(--bg-dark);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid var(--bg-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-stat-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg, 
+    transparent, 
+    rgba(255,255,255,0.1), 
+    transparent
+  );
+  transition: all 0.6s;
+}
+
+.game-stat-item:hover::before {
+  left: 100%;
+}
+
+.game-stat-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.game-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.wins .game-stat-value { color: var(--highlight-green); }
+.draws .game-stat-value { color: var(--highlight-yellow); }
+.losses .game-stat-value { color: var(--highlight-red); }
+
+/* Match History */
+.match-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: var(--bg-dark);
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--bg-light);
+  transition: all 0.3s ease;
+}
+
+.match-result.victory { color: var(--highlight-green); }
+.match-result.defeat { color: var(--highlight-red); }
+.match-result.draw { color: var(--highlight-yellow); }
+
+/* Game Setup - Enhanced Time Control Slider */
+.time-control {
+  margin-bottom: 30px;
+  position: relative;
+  width: 100%;
+}
+
+.time-control .slider-container {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Base track behind the slider */
+.time-control .slider-track {
+  position: absolute;
+  width: 100%;
+  height: 8px;
+  background: var(--bg-light);
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* Active track showing progress */
+.time-control .slider-track-active {
+  position: absolute;
+  width: 50%; /* Adjust based on slider value */
+  height: 8px;
+  background: linear-gradient(to right, var(--accent-purple), var(--accent-light-purple));
+  border-radius: 4px;
+  z-index: 2;
+}
+
+/* Slider Input Styles */
+.time-control input[type="range"] {
+  width: 100%;
+  background: transparent;
+  outline: none;
+  margin: 15px 0;
+  position: relative;
+  z-index: 3;
+}
+
+/* Webkit Slider Track */
+.time-control input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  border-radius: 4px;
+}
+
+/* Webkit Slider Thumb */
+.time-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: var(--text-primary);
+  border: 4px solid var(--accent-purple);
+  border-radius: 50%;
+  margin-top: -8px;
+  cursor: pointer;
+  position: relative;
+  z-index: 4;
+  transition: 
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Thumb Hover Effect */
+.time-control input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Slider Labels */
+.time-control .slider-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: 15px;
+}
+
+/* Optional: Tick Marks */
+.time-control .slider-ticks {
+  position: absolute;
+  width: 100%;
+  height: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.time-control .slider-tick {
+  width: 2px;
+  height: 8px;
+  background: rgba(255,255,255,0.3);
+}
+
+/* Color Buttons */
+.color-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.color-buttons button {
+  background-color: var(--bg-dark);
+  color: var(--text-secondary);
+  border: 1px solid var(--bg-light);
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.color-buttons button:hover,
+.color-buttons button.active {
+  background-color: var(--accent-purple);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+/* Friends List */
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--bg-dark);
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--bg-light);
+  transition: all 0.3s ease;
+}
+
+.friend-status {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.friend-status.online { color: var(--highlight-green); }
+.friend-status.offline { color: var(--text-secondary); }
+.friend-status.away { color: var(--highlight-yellow); }
+
+/* Loading State */
+.profile-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.spinner {
+  border: 4px solid var(--accent-purple);
+  border-top: 4px solid var(--text-primary);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
