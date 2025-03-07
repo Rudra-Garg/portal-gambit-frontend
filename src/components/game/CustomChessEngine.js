@@ -14,28 +14,11 @@ export class PortalChess extends Chess {
     
     let standardMoves = super.moves({ square, verbose });
     console.log('Initial standard moves:', standardMoves);
-    
-    // Filter out moves that would pass through a portal
-    standardMoves = standardMoves.filter(move => {
-      const dx = Math.sign(move.to.charCodeAt(0) - move.from.charCodeAt(0));
-      const dy = Math.sign(parseInt(move.to[1]) - parseInt(move.from[1]));
-      let x = move.from.charCodeAt(0);
-      let y = parseInt(move.from[1]);
-      
-      while (x !== move.to.charCodeAt(0) || y !== parseInt(move.to[1])) {
-        x += dx;
-        y += dy;
-        const square = String.fromCharCode(x) + y;
-        if (this.portals[square]) {
-          return false;
-        }
-      }
-      return true;
-    });
-    
+    standardMoves.forEach(move => console.log(typeof move === 'object' ? JSON.stringify(move, null, 2) : move));
+
     const portalMoves = [];
     const piece = this.get(square);
-    
+    console.log("reached portal check")
     if (!piece) return standardMoves;
     
     // Check if piece can move to any portal squares
