@@ -7,7 +7,7 @@ import { PortalChess } from './CustomChessEngine';
 import Peer from 'peerjs';
 import './PortalChessGame.css';
 
-const PortalChessGame = ({ gameId }) => {
+const PortalChessGame = ({ gameId, timeControl }) => {
   const [game, setGame] = useState(() => new PortalChess());
   const [portalMode, setPortalMode] = useState(false);
   const [portalStart, setPortalStart] = useState(null);
@@ -17,9 +17,12 @@ const PortalChessGame = ({ gameId }) => {
   const [chatMessages, setChatMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   
+  // Use the timeControl prop (in minutes) or default to 10 minutes
+  const initialTime = (timeControl || 10) * 60; // Convert minutes to seconds
+  
   // Timer states
-  const [whiteTime, setWhiteTime] = useState(10 * 60); // 10 minutes in seconds
-  const [blackTime, setBlackTime] = useState(10 * 60); // 10 minutes in seconds
+  const [whiteTime, setWhiteTime] = useState(initialTime);
+  const [blackTime, setBlackTime] = useState(initialTime);
   const [timerActive, setTimerActive] = useState(false);
   const timerIntervalRef = useRef(null);
   
@@ -161,6 +164,14 @@ const PortalChessGame = ({ gameId }) => {
           }
           if (data.blackTime !== undefined) {
             setBlackTime(data.blackTime);
+          }
+          
+          // If time_control exists in the game data, use it to set initial times
+          // but only if timers haven't been started yet
+          if (data.time_control && !timerActive && data.whiteTime === undefined) {
+            const gameTimeInSeconds = data.time_control * 60;
+            setWhiteTime(gameTimeInSeconds);
+            setBlackTime(gameTimeInSeconds);
           }
           
           // Start the timer if the game has started
@@ -344,8 +355,6 @@ const PortalChessGame = ({ gameId }) => {
       updateLostPieces();
     }
   }, [gameState]);
-  
-
   const handleSquareClick = (square) => {
     console.log('Square clicked:', square);
     console.log('Portal mode:', portalMode);

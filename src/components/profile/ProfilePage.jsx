@@ -101,20 +101,22 @@ const ProfilePage = ({ userId }) => {
 
   // Create game function that redirects to dashboard with game parameters
   const createNewGame = () => {
+    // Pass the gameTime to the dashboard
     navigate('/dashboard', { 
       state: { 
         createGame: true,
-        timeControl: gameTime,
+        timeControl: gameTime,  // This is the important part - passing the time
         playerColor: playerColor
       } 
     });
   };
 
   const findGames = () => {
-    // Instead of fetching games here, simply navigate to dashboard with a flag
+    // Also pass the preferred game time when finding games
     navigate('/dashboard', { 
       state: { 
-        findGames: true
+        findGames: true,
+        preferredTimeControl: gameTime  // Pass preferred time
       } 
     });
   };
