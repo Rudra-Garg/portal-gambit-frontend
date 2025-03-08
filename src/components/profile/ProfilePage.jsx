@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import './ProfilePage.css';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase/config';
+import { ref, push, get, update } from 'firebase/database';
+import { database } from '../../firebase/config';
+import PortalChessGame from '../game/PortalChessGame';
+import { initialBoardSetup } from '../game/chessLogic';
 
+import './ProfilePage.css';
 const ProfilePage = ({ userId }) => {
+  // Auth and navigation
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
   // State for player data
   const [playerData, setPlayerData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -9,6 +21,18 @@ const ProfilePage = ({ userId }) => {
   // Game setup states
   const [gameTime, setGameTime] = useState(5);
   const [playerColor, setPlayerColor] = useState('random');
+  const [isGameLoading, setIsGameLoading] = useState(false);
+  const [showAvailableGames, setShowAvailableGames] = useState(false);
+  const [availableGames, setAvailableGames] = useState([]);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   // Simulated API call to fetch player data
   useEffect(() => {
@@ -20,7 +44,7 @@ const ProfilePage = ({ userId }) => {
         const data = {
           id: userId || 'chess001',
           username: 'ChessMaster2024',
-          email: 'mail@gmail.com',
+          email: user?.email || 'mail@gmail.com',
           avatar: '/api/placeholder/150/150',
           joinDate: '2023-06-15',
           country: 'United States',
@@ -74,7 +98,38 @@ const ProfilePage = ({ userId }) => {
     };
 
     fetchPlayerData();
-  }, [userId]);
+  }, [userId, user]);
+
+  // Create game function that redirects to dashboard with game parameters
+  const createNewGame = () => {
+    navigate('/dashboard', { 
+      state: { 
+        createGame: true,
+        timeControl: gameTime,
+        playerColor: playerColor
+      } 
+    });
+  };
+
+  // Find available games
+  const findGames = () => {
+    // Instead of fetching games here, simply navigate to dashboard with a flag
+    navigate('/dashboard', { 
+      state: { 
+        findGames: true
+      } 
+    });
+  };
+
+  // Join game function that redirects to dashboard
+  const joinGame = (gameId) => {
+    navigate('/dashboard', { state: { joinGameId: gameId } });
+  };
+
+  // Go to dashboard function
+  const goToDashboard = () => {
+    navigate('/dashboard');
+  };
 
   // Loading state
   if (isLoading) {
@@ -105,6 +160,20 @@ const ProfilePage = ({ userId }) => {
             <div className="profile-info">
               <h2>{playerData.username}</h2>
               <p>{playerData.email}</p>
+              <div className="profile-actions">
+                <button
+                  onClick={goToDashboard}
+                  className="dashboard-button"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="logout-button"
+                >
+                  Logout
+                </button>
+              </div>
             </div>
           </div>
           
@@ -139,6 +208,7 @@ const ProfilePage = ({ userId }) => {
           </div>
         </div>
 
+        {/* Match History Block */}
         <div className="match-history-block">
           <h2>Match History</h2>
           {playerData.matches.map(match => (
@@ -156,6 +226,7 @@ const ProfilePage = ({ userId }) => {
           ))}
         </div>
 
+        {/* Game Setup Block with navigation to dashboard */}
         <div className="game-setup-block">
           <h2>Game Setup</h2>
           <div className="time-control">
@@ -195,9 +266,50 @@ const ProfilePage = ({ userId }) => {
               </button>
             </div>
           </div>
+          
+          <div className="game-actions">
+            <button
+              onClick={createNewGame}
+              disabled={isGameLoading}
+              className="create-game-button"
+            >
+              Create New Game
+            </button>
+            <button
+              onClick={findGames}
+              disabled={isGameLoading}
+              className="find-games-button"
+            >
+              Find Games
+            </button>
+          </div>
+          
+          {showAvailableGames && availableGames.length > 0 && (
+            <div className="available-games">
+              <h3>Available Games</h3>
+              <div className="games-list">
+                {availableGames.map((game) => (
+                  <div key={game.id} className="game-item">
+                    <span>
+                      {game.white_player_email ? `Game with ${game.white_player_email}` : 
+                       game.black_player_email ? `Game with ${game.black_player_email}` : 
+                       'Open Game'}
+                    </span>
+                    <span className="game-time">{game.time_control || 5} min</span>
+                    <button
+                      onClick={() => joinGame(game.id)}
+                      className="join-button"
+                    >
+                      Join
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Additional Block (Friends) */}
+        {/* Friends Block */}
         <div className="additional-block">
           <h2>Friends</h2>
           <div className="friends-list">

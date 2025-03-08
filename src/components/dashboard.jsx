@@ -1,8 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ref, push, get, update } from 'firebase/database';
 import { database } from '../firebase/config';
 import PortalChessGame from './game/PortalChessGame';
@@ -11,11 +11,35 @@ import { initialBoardSetup } from './game/chessLogic';
 const Dashboard = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [activeGame, setActiveGame] = useState(null);
     const [availableGames, setAvailableGames] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     console.log('User:', user);
+
+    // Check for incoming game parameters from profile page
+    useEffect(() => {
+        const handleIncomingGameRequest = async () => {
+            if (location.state) {
+                // If a game is being created from the profile page
+                if (location.state.createGame) {
+                    const { timeControl, playerColor } = location.state;
+                    createNewGameWithParams(timeControl, playerColor);
+                }
+                // If a game is being joined from the profile page
+                else if (location.state.joinGameId) {
+                    joinGame(location.state.joinGameId);
+                }
+                // If find games is being requested from the profile page
+                else if (location.state.findGames) {
+                    findGames();
+                }
+            }
+        };
+
+        handleIncomingGameRequest();
+    }, [location.state]);
 
     const handleLogout = async () => {
         try {
@@ -30,24 +54,39 @@ const Dashboard = () => {
         navigate(`/profile/${user.uid}`);
     };
     
-    const createNewGame = async () => {
+    const createNewGameWithParams = async (timeControl = 5, playerColor = 'white') => {
         setIsLoading(true);
         try {
-            const gameRef = push(ref(database, 'games'), {
+            const gameConfig = {
                 board: initialBoardSetup(),
                 portals: {},
                 current_turn: "white",
-                white_player: user.uid,
-                white_player_email: user.email,
+                time_control: timeControl,
                 status: "waiting",
                 created_at: Date.now(),
                 chat: {}
-            });
+            };
+
+            // Set player based on color selection
+            if (playerColor === 'white' || (playerColor === 'random' && Math.random() > 0.5)) {
+                gameConfig.white_player = user.uid;
+                gameConfig.white_player_email = user.email;
+            } else {
+                gameConfig.black_player = user.uid;
+                gameConfig.black_player_email = user.email;
+            }
+
+            const gameRef = push(ref(database, 'games'), gameConfig);
             setActiveGame(gameRef.key);
         } catch (error) {
             console.error('Error creating game:', error);
         }
         setIsLoading(false);
+    };
+
+    const createNewGame = async () => {
+        // Use default settings if called directly from dashboard
+        createNewGameWithParams();
     };
 
     const findGames = async () => {
@@ -58,7 +97,10 @@ const Dashboard = () => {
             const games = [];
             snapshot.forEach((childSnapshot) => {
                 const game = childSnapshot.val();
-                if (game.status === 'waiting' && game.white_player !== user.uid) {
+                // Check if the game is waiting and the current user isn't already a player
+                if (game.status === 'waiting' && 
+                    game.white_player !== user.uid && 
+                    game.black_player !== user.uid) {
                     games.push({
                         id: childSnapshot.key,
                         ...game
@@ -73,16 +115,35 @@ const Dashboard = () => {
     };
 
     const joinGame = async (gameId) => {
+        setIsLoading(true);
         try {
-            await update(ref(database, `games/${gameId}`), {
-                black_player: user.uid,
-                black_player_email: user.email,
+            const gameRef = ref(database, `games/${gameId}`);
+            const snapshot = await get(gameRef);
+            const game = snapshot.val();
+            
+            // Determine which role to take (white or black)
+            let updateData = {
                 status: 'active'
-            });
+            };
+            
+            if (!game.white_player) {
+                updateData.white_player = user.uid;
+                updateData.white_player_email = user.email;
+            } else if (!game.black_player) {
+                updateData.black_player = user.uid;
+                updateData.black_player_email = user.email;
+            } else {
+                console.error('Game already has both players');
+                setIsLoading(false);
+                return;
+            }
+            
+            await update(ref(database, `games/${gameId}`), updateData);
             setActiveGame(gameId);
         } catch (error) {
             console.error('Error joining game:', error);
         }
+        setIsLoading(false);
     };
 
     return (
@@ -114,21 +175,15 @@ const Dashboard = () => {
                         <div className="border-t pt-4">
                             <h2 className="text-xl font-semibold mb-4">Game Options</h2>
                             <div className="flex gap-4 mb-6">
-                                <button
-                                    onClick={createNewGame}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-300"
-                                >
-                                    Create New Game
-                                </button>
-                                <button
-                                    onClick={findGames}
-                                    disabled={isLoading}
-                                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-green-300"
-                                >
-                                    Find Games
-                                </button>
+                                
+                               
                             </div>
+
+                            {isLoading && (
+                                <div className="flex justify-center my-4">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                </div>
+                            )}
 
                             {availableGames.length > 0 && (
                                 <div className="mt-4">
@@ -139,18 +194,30 @@ const Dashboard = () => {
                                                 key={game.id}
                                                 className="flex items-center justify-between p-3 border rounded"
                                             >
-                                                <span className="text-gray-600">
-                                                    Game with {game.white_player_email}
-                                                </span>
+                                                <div>
+                                                    <span className="text-gray-600">
+                                                        {game.white_player_email ? `Game with ${game.white_player_email}` : 
+                                                        game.black_player_email ? `Game with ${game.black_player_email}` : 
+                                                        'Open Game'}
+                                                    </span>
+                                                    
+                                                </div>
                                                 <button
                                                     onClick={() => joinGame(game.id)}
-                                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    disabled={isLoading}
+                                                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
                                                 >
                                                     Join
                                                 </button>
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            )}
+                            
+                            {availableGames.length === 0 && !isLoading && (
+                                <div className="text-center text-gray-500 my-4">
+                                    No available games found. Create a new game or try again later.
                                 </div>
                             )}
                         </div>
