@@ -72,7 +72,7 @@ const SignupForm = () => {
 
   return (
     <div className="h-screen flex justify-center items-center relative">
-      {/* Video Background */}
+      {/* Video Backround */}
       <video
         autoPlay
         loop

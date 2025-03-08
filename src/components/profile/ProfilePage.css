@@ -56,7 +56,7 @@ body {
 .game-setup-block:hover,
 .additional-block:hover {
   transform: 
-    perspective(3500px) 
+    perspective(2500px) 
     rotateX(7deg) 
     rotateY(-7deg) 
     translateZ(50px) 
@@ -67,7 +67,7 @@ body {
 
 .match-history-block:hover {
   transform: 
-    perspective(3500px) 
+    perspective(2500px) 
     rotateX(-7deg) 
     rotateY(7deg) 
     translateZ(50px) 
@@ -76,7 +76,7 @@ body {
 
 .game-setup-block:hover {
   transform: 
-    perspective(3500px) 
+    perspective(2500px) 
     rotateX(5deg) 
     rotateY(5deg) 
     translateZ(50px) 
@@ -85,7 +85,7 @@ body {
 
 .additional-block:hover {
   transform: 
-    perspective(3500px) 
+    perspective(2500px) 
     rotateX(-5deg) 
     rotateY(5deg) 
     translateZ(50px) 
@@ -140,7 +140,7 @@ body {
   height: 100px;
   border-radius: 50%;
   margin-right: 20px;
-  border: 3px solid var(--accent-purple);
+  border: 3px black;
   transition: transform 0.3s ease;
 }
 
@@ -408,6 +408,7 @@ body {
   background-color: #2196f3;
   color: white;
   margin-right: 10px;
+  margin-top: 10px;
 }
 
 .dashboard-button:hover {
@@ -428,7 +429,6 @@ body {
 /* Create Game and Find Games buttons */
 .create-game-button,
 .find-games-button {
-  
   padding: 10px 20px;
   border: none;
   border-radius: 4px;

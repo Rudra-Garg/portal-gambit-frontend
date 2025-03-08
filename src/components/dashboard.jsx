@@ -175,8 +175,7 @@ const Dashboard = () => {
                         <div className="border-t pt-4">
                             <h2 className="text-xl font-semibold mb-4">Game Options</h2>
                             <div className="flex gap-4 mb-6">
-                                
-                               
+                              
                             </div>
 
                             {isLoading && (
@@ -200,7 +199,7 @@ const Dashboard = () => {
                                                         game.black_player_email ? `Game with ${game.black_player_email}` : 
                                                         'Open Game'}
                                                     </span>
-                                                    
+                                                   
                                                 </div>
                                                 <button
                                                     onClick={() => joinGame(game.id)}

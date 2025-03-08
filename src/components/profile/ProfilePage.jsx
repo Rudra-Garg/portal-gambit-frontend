@@ -43,9 +43,8 @@ const ProfilePage = ({ userId }) => {
         
         const data = {
           id: userId || 'chess001',
-          username: 'ChessMaster2024',
-          email: user?.email || 'mail@gmail.com',
-          avatar: '/api/placeholder/150/150',
+          username: user?.email || 'mail@gmail.com',
+          avatar: '../../../profile.png',
           joinDate: '2023-06-15',
           country: 'United States',
           age: 28,
@@ -111,7 +110,6 @@ const ProfilePage = ({ userId }) => {
     });
   };
 
-  // Find available games
   const findGames = () => {
     // Instead of fetching games here, simply navigate to dashboard with a flag
     navigate('/dashboard', { 
