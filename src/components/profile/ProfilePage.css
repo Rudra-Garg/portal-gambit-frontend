@@ -56,7 +56,7 @@ body {
 .game-setup-block:hover,
 .additional-block:hover {
   transform: 
-    perspective(1000px) 
+    perspective(3500px) 
     rotateX(7deg) 
     rotateY(-7deg) 
     translateZ(50px) 
@@ -67,7 +67,7 @@ body {
 
 .match-history-block:hover {
   transform: 
-    perspective(1000px) 
+    perspective(3500px) 
     rotateX(-7deg) 
     rotateY(7deg) 
     translateZ(50px) 
@@ -76,7 +76,7 @@ body {
 
 .game-setup-block:hover {
   transform: 
-    perspective(1000px) 
+    perspective(3500px) 
     rotateX(5deg) 
     rotateY(5deg) 
     translateZ(50px) 
@@ -85,7 +85,7 @@ body {
 
 .additional-block:hover {
   transform: 
-    perspective(1000px) 
+    perspective(3500px) 
     rotateX(-5deg) 
     rotateY(5deg) 
     translateZ(50px) 
