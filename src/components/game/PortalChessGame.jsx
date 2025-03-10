@@ -529,10 +529,75 @@ const PortalChessGame = ({ gameId }) => {
         return values[piece] || 0;
     };
 
-    const updateMoveHistory = () => {
-        const history = game.history({ verbose: true });
-        setMoveHistory(history);
+// Component state setup
+const moveHistoryRef = useRef([]); // To keep a reference that doesn't trigger re-renders
+
+// Update the move history function
+const updateMoveHistory = () => {
+    if (!gameId) return;
+    
+    // Reference to the game in Firebase to watch for lastMove changes
+    const gameRef = ref(database, `games/${gameId}`);
+    
+    // Set up a persistent listener for the game data
+    return onValue(gameRef, (snapshot) => {
+        const data = snapshot.val();
+        if (!data || !data.lastMove) return;
+        
+        // Get the current last move from Firebase
+        const lastMove = data.lastMove;
+        
+        // Update our ref first to avoid race conditions
+        const currentHistory = [...moveHistoryRef.current];
+        
+        // Check if this move is already in our history to avoid duplicates
+        const moveExists = currentHistory.some((move, index) => 
+            move.from === lastMove.from && 
+            move.to === lastMove.to && 
+            move.piece === lastMove.piece &&
+            move.san === lastMove.san && // Additional check using standard algebraic notation
+            index === currentHistory.length - 1 // Check if it's the last move (position matters)
+        );
+        
+        // Only add the move if it doesn't exist in our history
+        if (!moveExists) {
+            const updatedHistory = [...currentHistory, lastMove];
+            moveHistoryRef.current = updatedHistory;
+            setMoveHistory(updatedHistory);
+            console.log("Added new move to history:", lastMove);
+            
+            // Optionally, you could store the full history back to Firebase
+            // This would solve the persistence issue but requires additional writes
+            // set(ref(database, `games/${gameId}/moveHistory`), updatedHistory);
+        }
+    });
+};
+
+// Set up and clean up the listener with useEffect
+useEffect(() => {
+    const unsubscribe = updateMoveHistory();
+    
+    // Optional: You could load an initial history from Firebase if you're storing it
+    const loadInitialHistory = async () => {
+        try {
+            const historySnapshot = await get(ref(database, `games/${gameId}/moveHistory`));
+            if (historySnapshot.exists()) {
+                const historyData = historySnapshot.val();
+                moveHistoryRef.current = historyData;
+                setMoveHistory(historyData);
+            }
+        } catch (error) {
+            console.error("Error loading move history:", error);
+        }
     };
+    
+    loadInitialHistory();
+    
+    // Clean up listener on unmount
+    return () => {
+        if (unsubscribe) unsubscribe();
+    };
+}, [gameId]);
 
     const pieceSymbols = {
         p: '♟',
@@ -693,50 +758,87 @@ const PortalChessGame = ({ gameId }) => {
                     </div>
 
                     {/* Move history section with scrolling */}
-                    <div className="overflow-y-auto p-2 flex-grow" style={{ minHeight: '0px' }}>
-                        {moveHistory.length === 0 ? (
-                            <div className="flex items-center justify-center h-full text-gray-400 italic text-sm">
-                                No moves yet. Game will start soon.
-                            </div>
-                        ) : (
-                            <div className="space-y-1.5">
-                                {/* Game start indicator */}
-                                <div className="flex justify-center mb-2">
-                                    <div className="bg-gray-200 text-gray-600 rounded-full px-3 py-0.5 text-xs">
-                                        Game started
-                                    </div>
-                                </div>
+                    {/* Move history section with scrolling */}
+<div 
+  className="overflow-y-auto p-3 flex-grow rounded-md border border-gray-200 shadow-inner bg-gray-50" 
+  style={{ minHeight: '200px', maxHeight: '400px' }}
+>
+  {moveHistory.length === 0 ? (
+    <div className="flex flex-col items-center justify-center h-full text-gray-400 italic text-sm gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+      <span>No moves yet. Game will start soon.</span>
+    </div>
+  ) : (
+    <div className="space-y-2">
+      {/* Game start indicator */}
+      <div className="flex justify-center mb-3">
+        <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full px-4 py-1 text-xs font-medium shadow-sm">
+          Game started
+        </div>
+      </div>
 
-                                {/* Actual move history */}
-                                {moveHistory.map((move, index) => {
-                                    const isPlayer1 = index % 2 === 0;
-                                    return (
-                                        <div key={index} className="flex items-center">
-                                            <div className="w-16 text-xs text-gray-500 flex-shrink-0">
-                                                {Math.floor(index / 2) + 1}.{isPlayer1 ? '' : '..'}
-                                            </div>
-                                            <div
-                                                className={`px-2 py-1 rounded ${isPlayer1
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : 'bg-purple-100 text-purple-800'
-                                                    } text-sm flex-grow`}
-                                            >
-                                                {move.piece.toUpperCase() + move.from + move.to}
-                                                {move.captured ? (
-                                                    <span className="font-medium text-red-600">
-                                                        {' '}
-                                                        x{move.captured.toUpperCase()}
-                                                    </span>
-                                                ) : (
-                                                    ''
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
+      {/* Actual move history */}
+      <div className="grid grid-cols-1 gap-2">
+        {Array.from({ length: Math.ceil(moveHistory.length / 2) }).map((_, turnIndex) => {
+          const whiteIndex = turnIndex * 2;
+          const blackIndex = whiteIndex + 1;
+          const whiteMove = moveHistory[whiteIndex];
+          const blackMove = blackIndex < moveHistory.length ? moveHistory[blackIndex] : null;
+          
+          return (
+            <div key={turnIndex} className="flex flex-col sm:flex-row gap-1">
+              {/* Move number */}
+              <div className="w-10 text-xs font-semibold text-gray-500 flex items-center justify-center rounded-md bg-gray-100 shadow-sm">
+                {turnIndex + 1}
+              </div>
+              
+              {/* Moves container */}
+              <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-1">
+                {/* White's move */}
+                {whiteMove && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm transition-all hover:shadow-md">
+                    <div className="h-3 w-3 rounded-full bg-blue-500 flex-shrink-0"></div>
+                    <div className="text-blue-800 text-sm font-medium">
+                      {whiteMove.piece.toUpperCase() + whiteMove.from + whiteMove.to}
+                      {whiteMove.captured && (
+                        <span className="font-bold text-red-600 ml-1 inline-flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          {whiteMove.captured.toUpperCase()}
+                        </span>
+                      )}
                     </div>
+                  </div>
+                )}
+                
+                {/* Black's move */}
+                {blackMove && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 shadow-sm transition-all hover:shadow-md">
+                    <div className="h-3 w-3 rounded-full bg-purple-500 flex-shrink-0"></div>
+                    <div className="text-purple-800 text-sm font-medium">
+                      {blackMove.piece.toUpperCase() + blackMove.from + blackMove.to}
+                      {blackMove.captured && (
+                        <span className="font-bold text-red-600 ml-1 inline-flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          {blackMove.captured.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
+</div>
 
                     {/* Footer with action buttons */}
                     <div className="p-2 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
@@ -774,32 +876,83 @@ const PortalChessGame = ({ gameId }) => {
                 <div className="chat-container">
                     <div className="chat-header">
                         <h3>Game Chat</h3>
-                        <div className="voice-chat-controls">
-                            <button
-                                onClick={toggleVoiceChat}
-                                className={`voice-chat-toggle ${voiceChatEnabled ? 'active' : ''}`}
-                                disabled={isConnecting}
-                            >
-                                {isConnecting ? 'Connecting...' : voiceChatEnabled ? 'Disable Voice' : 'Enable Voice'}
-                            </button>
-                            {voiceChatEnabled && (
-                                <button
-                                    onClick={toggleMute}
-                                    className={`mute-button ${isMuted ? 'muted' : ''}`}
-                                >
-                                    {isMuted ? 'Unmute' : 'Mute'}
-                                </button>
-                            )}
-                            {voiceChatEnabled && (
-                                <span className={`connection-status ${connectionStatus}`}>
-                                    {connectionStatus === 'disconnected' && 'Disconnected'}
-                                    {connectionStatus === 'waiting' && 'Waiting for opponent...'}
-                                    {connectionStatus === 'connecting' && 'Connecting...'}
-                                    {connectionStatus === 'connected' && 'Connected'}
-                                    {connectionStatus === 'error' && 'Connection Error'}
-                                </span>
-                            )}
-                        </div>
+                        <div className="voice-chat-controls flex items-center space-x-2">
+    <button
+        onClick={toggleVoiceChat}
+        className={`voice-chat-toggle px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+            voiceChatEnabled 
+                ? 'bg-red-500 hover:bg-red-600 text-white' 
+                : 'bg-green-500 hover:bg-green-600 text-white'
+        } ${connectionStatus === 'connecting' ? 'opacity-75 cursor-wait' : ''}`}
+        disabled={connectionStatus === 'connecting'}
+    >
+        {connectionStatus === 'connecting' ? (
+            <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Connecting...
+            </span>
+        ) : voiceChatEnabled ? 'Disable Voice' : 'Enable Voice'}
+    </button>
+    
+    {voiceChatEnabled && (
+        <button
+            onClick={toggleMute}
+            className={`mute-button px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                isMuted 
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                    : 'bg-yellow-500 hover:bg-yellow-600 text-white'
+            }`}
+            disabled={connectionStatus !== 'connected'}
+        >
+            <span className="flex items-center">
+                {isMuted ? (
+                    <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                        </svg>
+                        Unmute
+                    </>
+                ) : (
+                    <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                        </svg>
+                        Mute
+                    </>
+                )}
+            </span>
+        </button>
+    )}
+    
+    {voiceChatEnabled && (
+        <div className={`connection-status px-2.5 py-1 rounded-full text-xs font-medium ${
+            connectionStatus === 'disconnected' ? 'bg-gray-200 text-gray-800' :
+            connectionStatus === 'waiting' ? 'bg-yellow-100 text-yellow-800' :
+            connectionStatus === 'connecting' ? 'bg-blue-100 text-blue-800' :
+            connectionStatus === 'connected' ? 'bg-green-100 text-green-800' :
+            'bg-red-100 text-red-800'
+        }`}>
+            <span className="flex items-center">
+                <span className={`h-2 w-2 rounded-full mr-1.5 ${
+                    connectionStatus === 'disconnected' ? 'bg-gray-500' :
+                    connectionStatus === 'waiting' ? 'bg-yellow-500' :
+                    connectionStatus === 'connecting' ? 'bg-blue-500 animate-pulse' :
+                    connectionStatus === 'connected' ? 'bg-green-500' :
+                    'bg-red-500'
+                }`}></span>
+                {connectionStatus === 'disconnected' && 'Disconnected'}
+                {connectionStatus === 'waiting' && 'Waiting for opponent...'}
+                {connectionStatus === 'connecting' && 'Connecting...'}
+                {connectionStatus === 'connected' && 'Connected'}
+                {connectionStatus === 'error' && 'Connection Error'}
+            </span>
+        </div>
+    )}
+</div>
                     </div>
                     <div className="chat-messages">
                         {chatMessages.length === 0 ? (
