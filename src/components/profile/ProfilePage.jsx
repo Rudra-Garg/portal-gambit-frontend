@@ -147,6 +147,7 @@ const ProfilePage = ({ userId }) => {
   }
 
   return (
+    <div className="profile-page-wrapper">
     <div className="profile-page-container">
       <div className="profile-grid">
         {/* Profile Block */}
@@ -324,6 +325,7 @@ const ProfilePage = ({ userId }) => {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 };

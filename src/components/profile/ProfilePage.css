@@ -12,14 +12,21 @@
   --highlight-red: #F44336;
 }
 
-body {
+.profile-page-wrapper {
   background-color: var(--bg-dark);
   color: var(--text-primary);
   font-family: 'Inter', 'Arial', sans-serif;
   perspective: 1500px;
   overflow-x: hidden;
+  min-height: 100vh; /* This ensures the background covers the full viewport height */
 }
 
+/* Keep the rest of your styles the same */
+.profile-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
 .profile-page-container {
   max-width: 1200px;
   margin: 0 auto;
