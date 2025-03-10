@@ -62,41 +62,9 @@
 .match-history-block:hover,
 .game-setup-block:hover,
 .additional-block:hover {
-  transform: 
-    perspective(2500px) 
-    rotateX(7deg) 
-    rotateY(-7deg) 
-    translateZ(50px) 
-    scale(1.05);
+  
   box-shadow: 0 25px 50px rgba(0,0,0,0.3);
   z-index: 10;
-}
-
-.match-history-block:hover {
-  transform: 
-    perspective(2500px) 
-    rotateX(-7deg) 
-    rotateY(7deg) 
-    translateZ(50px) 
-    scale(1.05);
-}
-
-.game-setup-block:hover {
-  transform: 
-    perspective(2500px) 
-    rotateX(5deg) 
-    rotateY(5deg) 
-    translateZ(50px) 
-    scale(1.05);
-}
-
-.additional-block:hover {
-  transform: 
-    perspective(2500px) 
-    rotateX(-5deg) 
-    rotateY(5deg) 
-    translateZ(50px) 
-    scale(1.05);
 }
 
 /* Enhanced Headings */
