@@ -15,7 +15,7 @@ const Dashboard = () => {
   const [activeGame, setActiveGame] = useState(null);
   const [availableGames, setAvailableGames] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Process location state for automatic game creation or joining
   useEffect(() => {
     const processLocationState = async () => {
@@ -25,19 +25,19 @@ const Dashboard = () => {
           const { timeControl, playerColor } = location.state;
           await handleCreateGame(timeControl, playerColor);
         }
-        
+
         // Handle find games request from profile page
         if (location.state.findGames) {
           await findGames(location.state.preferredTimeControl);
         }
-        
+
         // Handle join game request from profile page
         if (location.state.joinGameId) {
           await joinGame(location.state.joinGameId);
         }
       }
     };
-    
+
     processLocationState();
   }, [location.state]);
 
@@ -58,12 +58,12 @@ const Dashboard = () => {
     setIsLoading(true);
     try {
       const userName = user.displayName || user.email;
-     
+
       // Determine which color the creator will play based on playerColor
       let whitePlayer, whitePlayerName, whitePlayerEmail;
       let blackPlayer, blackPlayerName, blackPlayerEmail;
       let gameStatus = 'waiting';
-      
+
       // Set up player assignment based on color preference
       if (playerColor === 'random') {
         // Randomly assign color
@@ -73,7 +73,7 @@ const Dashboard = () => {
           playerColor = 'black';
         }
       }
-      
+
       if (playerColor === 'white') {
         whitePlayer = user.uid;
         whitePlayerName = userName;
@@ -129,20 +129,20 @@ const Dashboard = () => {
       const gamesRef = ref(database, 'games');
       const snapshot = await get(gamesRef);
       const games = [];
-      
+
       snapshot.forEach((childSnapshot) => {
         const game = childSnapshot.val();
         const isValidGame = game.status === 'waiting';
-        const isNotCreator = 
-          (game.white_player && game.white_player !== user.uid) || 
+        const isNotCreator =
+          (game.white_player && game.white_player !== user.uid) ||
           (game.black_player && game.black_player !== user.uid);
         const hasSpotAvailable = !game.white_player || !game.black_player;
-        
+
         // Filter by time control if specified
-        const matchesTimeControl = preferredTimeControl 
-          ? game.time_control === preferredTimeControl 
+        const matchesTimeControl = preferredTimeControl
+          ? game.time_control === preferredTimeControl
           : true;
-        
+
         if (isValidGame && isNotCreator && hasSpotAvailable && matchesTimeControl) {
           games.push({
             id: childSnapshot.key,
@@ -150,7 +150,7 @@ const Dashboard = () => {
           });
         }
       });
-      
+
       setAvailableGames(games);
     } catch (error) {
       console.error('Error finding games:', error);
@@ -162,14 +162,14 @@ const Dashboard = () => {
     try {
       const userName = user.displayName || user.email;
 
-      
+
       // Get current game data
       const gameRef = ref(database, `games/${gameId}`);
       const snapshot = await get(gameRef);
       const game = snapshot.val();
-      
+
       const updates = {};
-      
+
       // Determine which color slot is available
       if (!game.white_player) {
         updates.white_player = user.uid;
@@ -180,15 +180,15 @@ const Dashboard = () => {
         updates.black_player_name = userName;
         updates.black_player_email = user.email;
       }
-      
+
       // Check if game can now be set to active
-      if ((game.white_player || updates.white_player) && 
-          (game.black_player || updates.black_player)) {
+      if ((game.white_player || updates.white_player) &&
+        (game.black_player || updates.black_player)) {
         updates.status = 'active';
       }
-      
+
       await update(ref(database, `games/${gameId}`), updates);
-      navigate(`/game/${gameId}`); 
+      navigate(`/game/${gameId}`);
 
     } catch (error) {
       console.error('Error joining game:', error);
@@ -220,72 +220,47 @@ const Dashboard = () => {
             <p className="text-gray-600">Welcome, {user?.email}</p>
           </div>
 
-          {!activeGame ? (
-            <div className="border-t pt-4">
-              <h2 className="text-xl font-semibold mb-4">Game Options</h2>
-              <div className="flex gap-4 mb-6">
-                <button
-                  onClick={createNewGame}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-300"
-                >
-                  Create New Game
-                </button>
-                <button
-                  onClick={() => findGames()}
-                  disabled={isLoading}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-green-300"
-                >
-                  Find Games
-                </button>
-              </div>
 
 
-            {availableGames.length > 0 && (
-              <div className="mt-4">
-                <h3 className="text-lg font-semibold mb-2">Available Games</h3>
-                <div className="space-y-2">
-                  {availableGames.map((game) => (
-                    <div
-                      key={game.id}
-                      className="flex items-center justify-between p-3 border rounded"
-                    >
+          {availableGames.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">Available Games</h3>
+              <div className="space-y-2">
+                {availableGames.map((game) => (
+                  <div
+                    key={game.id}
+                    className="flex items-center justify-between p-3 border rounded"
+                  >
+                    <span className="text-gray-600">
+                      Game with {game.white_player_email}
+                    </span>
+
+                    <div className="flex flex-col">
                       <span className="text-gray-600">
-                        Game with {game.white_player_email}
+                        Game with {game.white_player_email || game.black_player_email}
                       </span>
-                      <button
-                        onClick={() => joinGame(game.id)}
-                        className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                      >
-
-                        <div className="flex flex-col">
-                          <span className="text-gray-600">
-                            Game with {game.white_player_email || game.black_player_email}
-                          </span>
-                          {game.time_control && (
-                            <span className="text-sm text-gray-500">
-                              Time: {game.time_control} minutes
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => joinGame(game.id)}
-                          className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        >
-                          Join
-                        </button>
-                      </div>
-                    ))}
+                      {game.time_control && (
+                        <span className="text-sm text-gray-500">
+                          Time: {game.time_control} minutes
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => joinGame(game.id)}
+                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Join
+                    </button>
                   </div>
-
-                </div>
+                ))}
               </div>
-            )}
-          </div>
+
+            </div>
+
+          )}
         </div>
       </div>
     </div>
-  );
+  )
 };
-
 export default Dashboard;
