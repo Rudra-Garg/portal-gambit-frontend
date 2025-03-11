@@ -1,0 +1,461 @@
+/* ProfilePage.css */
+:root {
+  --bg-dark: #1A1A2E;
+  --bg-medium: #16213E;
+  --bg-light: #0F3460;
+  --accent-purple: #6C63FF;
+  --accent-light-purple: #8A7FFF;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B8B8B8;
+  --highlight-green: #4CAF50;
+  --highlight-yellow: #FFC107;
+  --highlight-red: #F44336;
+}
+
+.profile-page-wrapper {
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Arial', sans-serif;
+  perspective: 1500px;
+  overflow-x: hidden;
+  min-height: 100vh; /* This ensures the background covers the full viewport height */
+}
+
+/* Keep the rest of your styles the same */
+.profile-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.profile-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+}
+
+/* Enhanced Tilt Hover Effect */
+.profile-block, 
+.match-history-block, 
+.game-setup-block, 
+.additional-block {
+  background-color: var(--bg-medium);
+  border-radius: 12px;
+  padding: 25px;
+  transition: 
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.4s ease;
+  transform-style: preserve-3d;
+  will-change: transform, box-shadow;
+  position: relative;
+  backface-visibility: hidden;
+  border: 1px solid var(--bg-light);
+}
+
+.profile-block:hover,
+.match-history-block:hover,
+.game-setup-block:hover,
+.additional-block:hover {
+  
+  box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+  z-index: 10;
+}
+
+/* Enhanced Headings */
+.profile-block h2,
+.match-history-block h2,
+.game-setup-block h2,
+.additional-block h2 {
+  position: relative;
+  font-size: 1.4rem;
+  color: var(--accent-purple);
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: inline-block;
+}
+
+.profile-block h2::after,
+.match-history-block h2::after,
+.game-setup-block h2::after,
+.additional-block h2::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background: var(--accent-purple);
+  transition: width 0.3s ease;
+}
+
+.profile-block h2:hover::after,
+.match-history-block h2:hover::after,
+.game-setup-block h2:hover::after,
+.additional-block h2:hover::after {
+  width: 100%;
+}
+
+/* Profile Block */
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  margin-right: 20px;
+  border: 3px black;
+  transition: transform 0.3s ease;
+}
+
+.profile-avatar:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Game Stats */
+.game-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.game-stat-item {
+  background-color: var(--bg-dark);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+  border: 1px solid var(--bg-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.game-stat-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    120deg, 
+    transparent, 
+    rgba(255,255,255,0.1), 
+    transparent
+  );
+  transition: all 0.6s;
+}
+
+.game-stat-item:hover::before {
+  left: 100%;
+}
+
+.game-stat-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.game-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.wins .game-stat-value { color: var(--highlight-green); }
+.draws .game-stat-value { color: var(--highlight-yellow); }
+.losses .game-stat-value { color: var(--highlight-red); }
+
+/* Match History */
+.match-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: var(--bg-dark);
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--bg-light);
+  transition: all 0.3s ease;
+}
+
+.match-result.victory { color: var(--highlight-green); }
+.match-result.defeat { color: var(--highlight-red); }
+.match-result.draw { color: var(--highlight-yellow); }
+
+/* Game Setup - Enhanced Time Control Slider */
+.time-control {
+  margin-bottom: 30px;
+  position: relative;
+  width: 100%;
+}
+
+.time-control .slider-container {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+/* Base track behind the slider */
+.time-control .slider-track {
+  position: absolute;
+  width: 100%;
+  height: 8px;
+  background: var(--bg-light);
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* Active track showing progress */
+.time-control .slider-track-active {
+  position: absolute;
+  width: 50%; /* Adjust based on slider value */
+  height: 8px;
+  background: linear-gradient(to right, var(--accent-purple), var(--accent-light-purple));
+  border-radius: 4px;
+  z-index: 2;
+}
+
+/* Slider Input Styles */
+.time-control input[type="range"] {
+  width: 100%;
+  background: transparent;
+  outline: none;
+  margin: 15px 0;
+  position: relative;
+  z-index: 3;
+}
+
+/* Webkit Slider Track */
+.time-control input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  background: transparent;
+  border-radius: 4px;
+}
+
+/* Webkit Slider Thumb */
+.time-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: var(--text-primary);
+  border: 4px solid var(--accent-purple);
+  border-radius: 50%;
+  margin-top: -8px;
+  cursor: pointer;
+  position: relative;
+  z-index: 4;
+  transition: 
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Thumb Hover Effect */
+.time-control input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* Slider Labels */
+.time-control .slider-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  margin-top: 15px;
+}
+
+/* Optional: Tick Marks */
+.time-control .slider-ticks {
+  position: absolute;
+  width: 100%;
+  height: 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.time-control .slider-tick {
+  width: 2px;
+  height: 8px;
+  background: rgba(255,255,255,0.3);
+}
+
+/* Color Buttons */
+.color-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.color-buttons button {
+  background-color: var(--bg-dark);
+  color: var(--text-secondary);
+  border: 1px solid var(--bg-light);
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.color-buttons button:hover,
+.color-buttons button.active {
+  background-color: var(--accent-purple);
+  color: var(--text-primary);
+  transform: scale(1.05);
+}
+
+/* Friends List */
+.friends-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.friend-item {
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--bg-dark);
+  padding: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--bg-light);
+  transition: all 0.3s ease;
+}
+
+.friend-status {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+}
+
+.friend-status.online { color: var(--highlight-green); }
+.friend-status.offline { color: var(--text-secondary); }
+.friend-status.away { color: var(--highlight-yellow); }
+
+/* Loading State */
+.profile-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.spinner {
+  border: 4px solid var(--accent-purple);
+  border-top: 4px solid var(--text-primary);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Dashboard and Logout buttons */
+.dashboard-button,
+.logout-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.dashboard-button {
+  background-color: #2196f3;
+  color: white;
+  margin-right: 10px;
+  margin-top: 10px;
+}
+
+.dashboard-button:hover {
+  background-color: #1976d2;
+  transform: translateY(-2px);
+}
+
+.logout-button {
+  background-color: #f44336;
+  color: white;
+}
+
+.logout-button:hover {
+  background-color: #d32f2f;
+  transform: translateY(-2px);
+}
+
+/* Create Game and Find Games buttons */
+.create-game-button,
+.find-games-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  width: 100%;
+  margin-bottom: 10px;
+  margin-top: 10px;
+}
+
+.create-game-button {
+  background-color: #2196f3;
+  color: white;
+}
+
+.create-game-button:hover {
+  background-color: #1976d2;
+  transform: translateY(-2px);
+}
+
+.find-games-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.find-games-button:hover {
+  background-color: #388e3c;
+  transform: translateY(-2px);
+}
+
+/* Disabled state */
+.create-game-button:disabled,
+.find-games-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  opacity: 0.7;
+}
+
+/* Join button in available games list */
+.join-button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  background-color: #2196f3;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+}
+
+.join-button:hover {
+  background-color: #1976d2;
+}
