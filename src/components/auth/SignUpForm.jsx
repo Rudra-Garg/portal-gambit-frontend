@@ -62,7 +62,7 @@ const SignupForm = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      navigate('/dashboard');
+      navigate('/profile/:userId');
     } catch (error) {
       setError('Failed to sign in with Google');
     } finally {
@@ -72,7 +72,7 @@ const SignupForm = () => {
 
   return (
     <div className="h-screen flex justify-center items-center relative">
-      {/* Video Background */}
+      {/* Video Backround */}
       <video
         autoPlay
         loop

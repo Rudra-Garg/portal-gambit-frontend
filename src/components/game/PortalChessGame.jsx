@@ -21,7 +21,7 @@ const PortalChessGame = ({ gameId }) => {
 
     // Voice chat states
     const [voiceChatEnabled, setVoiceChatEnabled] = useState(false);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMutyed, setIsMuted] = useState(false);
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
     const [boardWidth, setBoardWidth] = useState(400);

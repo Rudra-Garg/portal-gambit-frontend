@@ -18,7 +18,7 @@ const LoginForm = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigate('/dashboard');
+      navigate('/profile/:userId');
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in. Please check your credentials.');
@@ -34,7 +34,7 @@ const LoginForm = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      navigate('/dashboard');
+      navigate('/profile/:userId');
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in with Google');
@@ -118,7 +118,7 @@ const LoginForm = () => {
         </button>
 
         <p className="text-center mt-4 text-white">
-          Don&#39;t have an account?{' '}
+          Dont have an account?{' '}
           <Link to="/signup" className="text-blue-600 hover:text-blue-800">
             Sign up
           </Link>
