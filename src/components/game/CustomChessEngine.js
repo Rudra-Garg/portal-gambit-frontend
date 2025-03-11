@@ -19,6 +19,7 @@ export class PortalChess extends Chess {
     const portalMoves = [];
     const piece = this.get(square);
     console.log("reached portal check")
+    console.log("piece: ", piece, square)
     if (!piece) return standardMoves;
 
     const isSquareInPiecePath = (from, to, checkSquare, pieceType) => {
@@ -28,7 +29,7 @@ export class PortalChess extends Chess {
       const toRank = parseInt(to[1]) - 1;
       const checkFile = checkSquare.charCodeAt(0) - 97;
       const checkRank = parseInt(checkSquare[1]) - 1;
-
+      console.log("checking now for postn: ", from, to, checkSquare, pieceType)
       switch (pieceType) {
         case 'r': // Rook
           if (fromFile === toFile) {
@@ -65,6 +66,7 @@ export class PortalChess extends Chess {
             isSquareInPiecePath(from, to, checkSquare, 'b');
 
         case 'p': // Pawn - only straight movement
+
           if (fromFile === toFile && Math.abs(toRank - fromRank) === 2) {
             return checkFile === fromFile &&
               checkRank === (fromRank + Math.sign(toRank - fromRank));
@@ -91,14 +93,27 @@ export class PortalChess extends Chess {
 
     // Check if piece can move to any portal squares
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
+      // Only allow specific pieces to use portals
+      const allowedPieces = ['r', 'b', 'q', 'p'];
+      if (!allowedPieces.includes(piece.type)) {
+        return;
+      }
+
+      // Special handling for pawns
+      if (piece.type === 'p') {
+        // Only allow portal moves for pawns on their starting rank
+        const startRank = piece.color === 'w' ? '2' : '7';
+        if (square[1] !== startRank) {
+          return;
+        }
+      }
+
       // Check if the piece can move to the portal entrance
       const movesToPortal = super.moves({ square, verbose: true })
         .filter(move => move.to === portalSquare);
 
       if (movesToPortal.length > 0) {
-        console.log('Can move to portal at:', portalSquare);
         const portalExit = portal.linkedTo;
-        console.log('Portal exit at:', portalExit);
 
         // Calculate direction of movement to portal
         const moveToPortal = movesToPortal[0];
@@ -112,12 +127,34 @@ export class PortalChess extends Chess {
         // Get all possible moves from the exit point
         const exitMoves = this.moves({ square: portalExit, verbose: true });
 
-        // Filter moves that maintain the same direction
+        // Filter moves based on piece type and direction
         exitMoves.forEach(move => {
           const exitDx = Math.sign(move.to.charCodeAt(0) - portalExit.charCodeAt(0));
           const exitDy = Math.sign(parseInt(move.to[1]) - parseInt(portalExit[1]));
 
-          if (exitDx === dx && exitDy === dy) {
+          let isValidDirection = false;
+
+          switch (piece.type) {
+            case 'r': // Rook: same horizontal or vertical direction
+              isValidDirection = (exitDx === dx && exitDy === 0) || (exitDx === 0 && exitDy === dy);
+              break;
+            case 'b': // Bishop: same diagonal direction
+              isValidDirection = Math.abs(exitDx) === Math.abs(exitDy) &&
+                (exitDx === dx || exitDx === -dx);
+              break;
+            case 'q': // Queen: combines rook and bishop rules
+              isValidDirection = ((exitDx === dx && exitDy === 0) ||
+                (exitDx === 0 && exitDy === dy) ||
+                (Math.abs(exitDx) === Math.abs(exitDy) &&
+                  (exitDx === dx || exitDx === -dx)));
+              break;
+            case 'p': // Pawn: only straight ahead and double move
+              isValidDirection = exitDx === 0 &&
+                exitDy === (piece.color === 'w' ? 1 : -1) * 2;
+              break;
+          }
+
+          if (isValidDirection) {
             const targetPiece = this.get(move.to);
             if (!targetPiece || targetPiece.color !== piece.color) {
               portalMoves.push({
@@ -143,8 +180,6 @@ export class PortalChess extends Chess {
         this.put(originalPiece, square);
       }
     });
-
-
 
     console.log('Portal moves:', portalMoves);
     const allMoves = [...standardMoves, ...portalMoves];
