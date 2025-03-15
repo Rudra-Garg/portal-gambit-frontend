@@ -186,8 +186,8 @@ const PortalChessGame = ({ gameId }) => {
   }, [game]);
 
   return (
-    <div className="portal-chess-container flex flex-col md:flex-row w-full h-screen">
-      <div className="w-full md:w-1/2 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-2 flex flex-col h-full max-h-screen overflow-hidden shadow-lg border border-purple-200">
+    <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
+            <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden ">
         <PlayerInfo 
           playerNumber={2}
           playerName="OPPONENT 2"
@@ -213,7 +213,7 @@ const PortalChessGame = ({ gameId }) => {
         />
       </div>
 
-      <div className="w-full md:w-1/2 bg-green-400 p-2 flex flex-col h-full">
+      <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full">
         <GameHistory 
           moveHistory={moveHistory}
           portalMode={portalMode}

@@ -65,7 +65,10 @@ const ChessboardWrapper = ({
   };
 
   return (
-    <div className="flex-grow flex items-center justify-center mb-1 overflow-hidden" id="board-container">
+    <div
+    className="flex-grow bg-transparent flex items-center justify-center mb-1 overflow-hidden"
+    id="board-container"
+>
       <div className="board-container" style={{ 
         width: boardWidth, 
         maxWidth: '100%',
