@@ -11,6 +11,7 @@ import ChatComponent from './components/ChatComponent';
 import { useLostPieces } from './hooks/useLostPieces';
 import { useChat } from './hooks/useChat';
 import { useVoiceChat } from './hooks/useVoiceChat';
+import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
 
 const PortalChessGame = ({ gameId }) => {
@@ -20,10 +21,12 @@ const PortalChessGame = ({ gameId }) => {
   const [selectedSquare, setSelectedSquare] = useState(null);
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
-  const [moveHistory, setMoveHistory] = useState([]);
   
+  // Use the custom hooks
+  const moveHistory = useMoveHistory(gameId);
   const [lostPieces, updateLostPieces] = useLostPieces(game);
   const { chatMessages, newMessage, setNewMessage, sendMessage } = useChat(gameId, user);
+  
   const {
     voiceChatEnabled,
     isMuted,
@@ -53,8 +56,7 @@ const PortalChessGame = ({ gameId }) => {
           newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
           
           setGame(newGame);
-          updateMoveHistory();
-          updateLostPieces();
+          updateLostPieces(newGame);
           
         } catch (error) {
           console.error('Error initializing chess game:', error);
@@ -127,8 +129,7 @@ const PortalChessGame = ({ gameId }) => {
         });
   
         setGame(newGame);
-        updateMoveHistory();
-        updateLostPieces();
+        updateLostPieces(newGame);
   
         return true;
       }
@@ -137,7 +138,7 @@ const PortalChessGame = ({ gameId }) => {
       console.error('Error making move:', error);
       return false;
     }
-  }, [game, gameState, gameId, isMyTurn]);
+  }, [game, gameState, gameId, isMyTurn, updateLostPieces]);
 
   const handleSquareClick = useCallback((square) => {
     if (!portalMode) {
@@ -178,19 +179,24 @@ const PortalChessGame = ({ gameId }) => {
         }
       }
     }
-  }, [portalMode, selectedSquare, game, portalStart, gameState, gameId]);
+  }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
 
-  const updateMoveHistory = useCallback(() => {
-    const history = game.history({ verbose: true });
-    setMoveHistory(history);
-  }, [game]);
+  const handleLeaveGame = useCallback(() => {
+    // Implement leave game functionality
+    console.log("Leaving game...");
+    // Navigation logic or cleanup here
+  }, []);
+
+  const amIWhitePlayer = gameState?.white_player === user?.uid;
 
   return (
     <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
-            <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden ">
+      <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden">
         <PlayerInfo 
+          isTopPlayer={true}
           playerNumber={2}
           playerName="OPPONENT 2"
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
           lostPieces={lostPieces.black}
         />
         
@@ -207,8 +213,10 @@ const PortalChessGame = ({ gameId }) => {
         />
         
         <PlayerInfo 
+         isTopPlayer={false}
           playerNumber={1}
-          playerName="OPPONENT 1"
+          playerName="OPPONENT 1" 
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
           lostPieces={lostPieces.white}
         />
       </div>
@@ -219,6 +227,7 @@ const PortalChessGame = ({ gameId }) => {
           portalMode={portalMode}
           setPortalMode={setPortalMode}
           isMyTurn={isMyTurn}
+          onLeaveGame={handleLeaveGame}
         />
         
         <ChatComponent 
