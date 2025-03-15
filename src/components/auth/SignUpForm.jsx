@@ -62,7 +62,7 @@ const SignupForm = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      navigate('/dashboard');
+      navigate('/profile:userId');
     } catch (error) {
       setError('Failed to sign in with Google');
     } finally {
