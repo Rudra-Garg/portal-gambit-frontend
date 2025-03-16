@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
-import { ref, push, get, update } from 'firebase/database';
+import { ref, push, get, update, remove } from 'firebase/database';
 import { database } from '../../firebase/config';
 import PortalChessGame from '../game/PortalChessGame';
 import AvailableGamesComponent from './availableGameComponent';
@@ -192,9 +192,57 @@ const GameSetup = () => {
     }
   };
   
-  const exitGame = () => {
-    setActiveGame(null);
-    setShowAvailableGames(false);
+  const exitGame = async () => {
+    if (activeGame) {
+      try {
+        // Get current game data
+        const gameSnapshot = await get(ref(database, `games/${activeGame}`));
+        const gameData = gameSnapshot.val();
+        
+        if (!gameData) {
+          console.error('Game not found');
+          setActiveGame(null);
+          setShowAvailableGames(false);
+          return;
+        }
+        
+        const updateData = {};
+        
+        // Determine which player is leaving
+        if (gameData.white_player === user.uid) {
+          updateData.white_player = null;
+          updateData.white_player_name = null;
+          updateData.white_player_email = null;
+        } else if (gameData.black_player === user.uid) {
+          updateData.black_player = null;
+          updateData.black_player_name = null;
+          updateData.black_player_email = null;
+        }
+        
+        // Check if both players will be gone after this update
+        const bothPlayersLeaving = 
+          (gameData.white_player === user.uid || !gameData.white_player) && 
+          (gameData.black_player === user.uid || !gameData.black_player);
+        
+        if (bothPlayersLeaving) {
+          // Delete the game if both players have left
+          await remove(ref(database, `games/${activeGame}`));
+          console.log('Game deleted as both players have left');
+        } else {
+          // Update the game with the player removed
+          await update(ref(database, `games/${activeGame}`), updateData);
+          console.log('Player removed from game');
+        }
+        
+        setActiveGame(null);
+        setShowAvailableGames(false);
+      } catch (error) {
+        console.error('Error exiting game:', error);
+      }
+    } else {
+      setActiveGame(null);
+      setShowAvailableGames(false);
+    }
   };
 
   const backToSetup = () => {
