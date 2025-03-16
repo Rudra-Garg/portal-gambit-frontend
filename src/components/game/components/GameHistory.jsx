@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, onLeaveGame }) => {
+const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit}) => {
   // Format date for display
   const formattedDate = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
 
@@ -104,7 +104,7 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, on
           {portalMode ? 'Cancel Portal' : 'Place Portal'}
         </button>
         <button 
-          onClick={onLeaveGame}
+          onClick={()=>{exit()}}
           className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -127,7 +127,7 @@ GameHistory.propTypes = {
   portalMode: PropTypes.bool.isRequired,
   setPortalMode: PropTypes.func.isRequired,
   isMyTurn: PropTypes.func.isRequired,
-  onLeaveGame: PropTypes.func
+  exit: PropTypes.func
 };
 
 export default GameHistory;

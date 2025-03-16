@@ -14,7 +14,7 @@ import { useVoiceChat } from './hooks/useVoiceChat';
 import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
 
-const PortalChessGame = ({ gameId }) => {
+const PortalChessGame = ({ gameId,exit }) => {
   const [game, setGame] = useState(() => new PortalChess());
   const [portalMode, setPortalMode] = useState(false);
   const [portalStart, setPortalStart] = useState(null);
@@ -227,7 +227,7 @@ const PortalChessGame = ({ gameId }) => {
           portalMode={portalMode}
           setPortalMode={setPortalMode}
           isMyTurn={isMyTurn}
-          onLeaveGame={handleLeaveGame}
+          exit={exit}
         />
         
         <ChatComponent 
