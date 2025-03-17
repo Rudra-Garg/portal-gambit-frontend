@@ -6,7 +6,7 @@ import { auth } from '../../firebase/config';
 import { ref, push, get, update, remove } from 'firebase/database';
 import { database } from '../../firebase/config';
 import PortalChessGame from '../game/PortalChessGame';
-import AvailableGamesComponent from './availableGameComponent';
+import AvailableGamesComponent from './AvailableGameComponent.jsx';
 import { initialBoardSetup } from '../game/chessLogic';
 
 const GameSetup = () => {
@@ -252,11 +252,11 @@ const GameSetup = () => {
   return (
     <>
           {activeGame ? (
-          
-              <PortalChessGame 
-              gameId={activeGame} 
-              exit={exitGame}
-              />
+              navigate(`/gameScreen?gameId=${activeGame}`)
+              // <PortalChessGame
+              // gameId={activeGame}
+              // exit={exitGame}
+              // />
           
           ) : showAvailableGames ? (
             <AvailableGamesComponent 

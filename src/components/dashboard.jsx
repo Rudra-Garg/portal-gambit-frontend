@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { ref, push, get, update } from 'firebase/database';
 import { database } from '../firebase/config';
 import PortalChessGame from './game/PortalChessGame';
