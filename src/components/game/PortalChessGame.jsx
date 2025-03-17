@@ -262,6 +262,10 @@ const PortalChessGame = () => {
   }, []);
 
   const amIWhitePlayer = gameState?.white_player === user?.uid;
+  
+  // Get player names from gameState
+  const whitePlayerName = gameState?.white_player_name || "White Player";
+  const blackPlayerName = gameState?.black_player_name || "Black Player";
 
   return (
     <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
@@ -269,9 +273,9 @@ const PortalChessGame = () => {
         <PlayerInfo 
           isTopPlayer={true}
           playerNumber={2}
-          playerName="OPPONENT 2"
+          playerName={amIWhitePlayer ? blackPlayerName : whitePlayerName}
           isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
-          lostPieces={lostPieces.black}
+          lostPieces={!amIWhitePlayer ? lostPieces.black : lostPieces.white}
         />
         
         <ChessboardWrapper 
@@ -287,11 +291,11 @@ const PortalChessGame = () => {
         />
         
         <PlayerInfo 
-         isTopPlayer={false}
+          isTopPlayer={false}
           playerNumber={1}
-          playerName="OPPONENT 1" 
+          playerName={amIWhitePlayer ? whitePlayerName : blackPlayerName}
           isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
-          lostPieces={lostPieces.white}
+          lostPieces={!amIWhitePlayer ? lostPieces.white : lostPieces.black}
         />
       </div>
 
@@ -322,9 +326,5 @@ const PortalChessGame = () => {
     </div>
   );
 };
-
-// PortalChessGame.propTypes = {
-//   gameId: PropTypes.string.isRequired
-// };
 
 export default PortalChessGame;
