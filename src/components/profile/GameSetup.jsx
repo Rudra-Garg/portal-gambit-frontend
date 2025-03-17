@@ -252,11 +252,11 @@ const GameSetup = () => {
   return (
     <>
           {activeGame ? (
-          
-              <PortalChessGame 
-              gameId={activeGame} 
-              exit={exitGame}
-              />
+              navigate(`/gameScreen?gameId=${activeGame}`)
+              // <PortalChessGame
+              // gameId={activeGame}
+              // exit={exitGame}
+              // />
           
           ) : showAvailableGames ? (
             <AvailableGamesComponent 

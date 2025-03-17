@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ref, update, onValue } from 'firebase/database';
+import {ref, update, onValue, get, remove} from 'firebase/database';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { PortalChess } from './CustomChessEngine';
@@ -13,15 +13,89 @@ import { useChat } from './hooks/useChat';
 import { useVoiceChat } from './hooks/useVoiceChat';
 import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
+import {useNavigate} from "react-router-dom";
 
-const PortalChessGame = ({ gameId,exit }) => {
+const PortalChessGame = () => {
   const [game, setGame] = useState(() => new PortalChess());
   const [portalMode, setPortalMode] = useState(false);
   const [portalStart, setPortalStart] = useState(null);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
-  
+  const [gameId, setGameId] = useState(null);
+  const[activeGame,setActiveGame]=useState(null);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const urlObj = new URL(window.location.href);
+        setGameId(urlObj.searchParams.get('gameId'));
+        setActiveGame(urlObj.searchParams.get('gameId'))
+      } catch (error) {
+        console.error("Invalid URL:", error);
+        setGameId(null);
+      }
+    } else {
+      setGameId(null);
+    }
+  }, [setGameId]); // Add setGameId to the dependency array
+
+
+  const exitGame = async () => {
+    if (activeGame) {
+      try {
+        // Get current game data
+        const gameSnapshot = await get(ref(database, `games/${activeGame}`));
+        const gameData = gameSnapshot.val();
+
+        if (!gameData) {
+          console.error('Game not found');
+          setActiveGame(null);
+          // setShowAvailableGames(false);
+          return;
+        }
+
+        const updateData = {};
+
+        // Determine which player is leaving
+        if (gameData.white_player === user.uid) {
+          updateData.white_player = null;
+          updateData.white_player_name = null;
+          updateData.white_player_email = null;
+        } else if (gameData.black_player === user.uid) {
+          updateData.black_player = null;
+          updateData.black_player_name = null;
+          updateData.black_player_email = null;
+        }
+
+        // Check if both players will be gone after this update
+        const bothPlayersLeaving =
+          (gameData.white_player === user.uid || !gameData.white_player) &&
+          (gameData.black_player === user.uid || !gameData.black_player);
+
+        if (bothPlayersLeaving) {
+          // Delete the game if both players have left
+          await remove(ref(database, `games/${activeGame}`));
+          console.log('Game deleted as both players have left');
+        } else {
+          // Update the game with the player removed
+          await update(ref(database, `games/${activeGame}`), updateData);
+          console.log('Player removed from game');
+        }
+
+        setActiveGame(null);
+        navigate('/profile:userId');
+        // setShowAvailableGames(false);
+      } catch (error) {
+        console.error('Error exiting game:', error);
+      }
+    } else {
+      setActiveGame(null);
+      // setShowAvailableGames(false);
+    }
+  };
   // Use the custom hooks
   const moveHistory = useMoveHistory(gameId);
   const [lostPieces, updateLostPieces] = useLostPieces(game);
@@ -227,7 +301,7 @@ const PortalChessGame = ({ gameId,exit }) => {
           portalMode={portalMode}
           setPortalMode={setPortalMode}
           isMyTurn={isMyTurn}
-          exit={exit}
+          exit={exitGame}
         />
         
         <ChatComponent 
@@ -249,8 +323,8 @@ const PortalChessGame = ({ gameId,exit }) => {
   );
 };
 
-PortalChessGame.propTypes = {
-  gameId: PropTypes.string.isRequired
-};
+// PortalChessGame.propTypes = {
+//   gameId: PropTypes.string.isRequired
+// };
 
 export default PortalChessGame;

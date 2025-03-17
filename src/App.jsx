@@ -4,7 +4,8 @@ import LoginForm from './components/auth/LoginForm.jsx';
 import PrivateRoute from './components/auth/PrivateRoute.jsx';
 import Dashboard from './components/dashboard.jsx';
 import SignupForm from './components/auth/SignUpForm.jsx';
-import ProfilePage from './components/profile/ProfilePage.jsx';  // Import the ProfilePage
+import ProfilePage from './components/profile/ProfilePage.jsx';
+import PortalChessGame from "./components/game/PortalChessGame.jsx";  // Import the ProfilePage
 
 const App = () => {
     return (
@@ -29,7 +30,16 @@ const App = () => {
                             </PrivateRoute>
                         }
                     />
-                    <Route path="/" element={<Navigate to="/login" replace/>}/>
+                  <Route
+                    path="/gameScreen"
+                    element={
+                      <PrivateRoute>
+                        <PortalChessGame />
+                      </PrivateRoute>
+                    }
+                  />
+
+                  <Route path="/" element={<Navigate to="/login" replace/>}/>
                 </Routes>
             </AuthProvider>
         </Router>
