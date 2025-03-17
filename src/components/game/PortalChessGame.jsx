@@ -139,7 +139,7 @@ const PortalChessGame = () => {
     });
 
     return () => unsubscribe();
-  }, [gameId]);
+  }, [gameId, updateLostPieces]);
 
   const isMyTurn = useCallback(() => {
     if (!gameState || !user) return false;
@@ -255,17 +255,15 @@ const PortalChessGame = () => {
     }
   }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
 
-  const handleLeaveGame = useCallback(() => {
-    // Implement leave game functionality
-    console.log("Leaving game...");
-    // Navigation logic or cleanup here
-  }, []);
-
   const amIWhitePlayer = gameState?.white_player === user?.uid;
   
   // Get player names from gameState
   const whitePlayerName = gameState?.white_player_name || "White Player";
   const blackPlayerName = gameState?.black_player_name || "Black Player";
+
+  // Determine player colors
+  const topPlayerColor = amIWhitePlayer ? 'black' : 'white';
+  const bottomPlayerColor = amIWhitePlayer ? 'white' : 'black';
 
   return (
     <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
@@ -275,7 +273,8 @@ const PortalChessGame = () => {
           playerNumber={2}
           playerName={amIWhitePlayer ? blackPlayerName : whitePlayerName}
           isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
-          lostPieces={!amIWhitePlayer ? lostPieces.black : lostPieces.white}
+          lostPieces={lostPieces}
+          playerColor={topPlayerColor}
         />
         
         <ChessboardWrapper 
@@ -295,7 +294,8 @@ const PortalChessGame = () => {
           playerNumber={1}
           playerName={amIWhitePlayer ? whitePlayerName : blackPlayerName}
           isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
-          lostPieces={!amIWhitePlayer ? lostPieces.white : lostPieces.black}
+          lostPieces={lostPieces}
+          playerColor={bottomPlayerColor}
         />
       </div>
 

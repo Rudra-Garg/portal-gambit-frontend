@@ -1,61 +1,52 @@
+import React from 'react';
 import PropTypes from 'prop-types';
-import { pieceSymbols } from '../utils/pieceUtils';
+import LostPiecesDisplay from './LostPiecesDisplay';
 
-const PlayerInfo = ({ isTopPlayer,playerNumber, playerName, isMyTurn,lostPieces }) => {
-  const renderPieceWithCounter = (pieceData) => {
-    return (
-      <div key={pieceData.type} className="flex items-center mr-2">
-        <span className="text-lg">{pieceSymbols[pieceData.type]}</span>
-        {pieceData.count > 1 && (
-          <span className="text-xs font-medium ml-1">x{pieceData.count}</span>
-        )}
-      </div>
-    );
-  };
-
+const PlayerInfo = ({ isTopPlayer, playerNumber, playerName, isMyTurn, lostPieces, playerColor }) => {
   return (
     <div className="bg-white p-1 rounded-lg shadow-md mb-1 flex flex-col border border-gray-100">
       <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className={`w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full mr-2 shadow-inner 
-                              flex items-center justify-center text-white font-bold text-xs 
-                              ${isMyTurn ? 'ring-2 ring-yellow-400' : ''}`}>
-                {isTopPlayer ? "p2" : "p1"}
-              </div>
-              <div className="font-semibold text-gray-800 text-sm">
-                {playerName}
-              </div>
-              <div className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full ml-2">
-                <div className="mr-1 text-xs text-gray-600 font-medium">0 / 0 / 0</div>
-              </div>
-            </div>
-            <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
-              <div className="font-bold text-gray-800 text-xs">00:00</div>
-            </div>
+        <div className="flex items-center">
+          <div className={`w-8 h-8 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full mr-2 shadow-inner 
+                          flex items-center justify-center text-white font-bold text-xs 
+                          ${isMyTurn ? 'ring-2 ring-yellow-400' : ''}`}>
+            {isTopPlayer ? "p2" : "p1"}
           </div>
+          <div className="font-semibold text-gray-800 text-sm">
+            {playerName}
+          </div>
+          <div className="flex items-center bg-gray-50 px-2 py-0.5 rounded-full ml-2">
+            <div className="mr-1 text-xs text-gray-600 font-medium">0 / 0 / 0</div>
+          </div>
+        </div>
+        <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
+          <div className="font-bold text-gray-800 text-xs">00:00</div>
+        </div>
+      </div>
       
       <div className="mt-1 flex items-center">
-        <div className="flex flex-wrap min-h-[28px] bg-gray-50 rounded-md p-1 w-full">
-          {lostPieces.length > 0 ? 
-            lostPieces.map(piece => renderPieceWithCounter(piece)) : 
-            <span className="text-gray-300 text-xs italic px-1">No pieces</span>
-          }
-        </div>
+        <LostPiecesDisplay 
+          lostPieces={typeof lostPieces === 'object' ? lostPieces : { white: [], black: [] }} 
+          color={playerColor} 
+        />
       </div>
     </div>
   );
 };
 
 PlayerInfo.propTypes = {
-  isTopPlayer:PropTypes.bool.isRequired,
+  isTopPlayer: PropTypes.bool.isRequired,
   playerNumber: PropTypes.number.isRequired,
   playerName: PropTypes.string.isRequired,
   isMyTurn: PropTypes.bool.isRequired,
-  lostPieces: PropTypes.arrayOf(PropTypes.shape({
-    type: PropTypes.string.isRequired,
-    count: PropTypes.number.isRequired,
-    value: PropTypes.number.isRequired
-  })).isRequired
+  lostPieces: PropTypes.oneOfType([
+    PropTypes.array,
+    PropTypes.shape({
+      white: PropTypes.array,
+      black: PropTypes.array
+    })
+  ]),
+  playerColor: PropTypes.string.isRequired
 };
 
-export default PlayerInfo; 
+export default PlayerInfo;
