@@ -5,7 +5,9 @@ import PrivateRoute from './components/auth/PrivateRoute.jsx';
 import Dashboard from './components/dashboard.jsx';
 import SignupForm from './components/auth/SignUpForm.jsx';
 import ProfilePage from './components/profile/ProfilePage.jsx';
+
 import PortalChessGame from "./components/game/PortalChessGame.jsx";  // Import the ProfilePage
+
 
 const App = () => {
     return (
@@ -23,7 +25,9 @@ const App = () => {
                         }
                     />
                      <Route
+
                         path="/profile:userId"
+
                         element={
                             <PrivateRoute>
                                 <ProfilePage />
@@ -40,6 +44,7 @@ const App = () => {
                   />
 
                   <Route path="/" element={<Navigate to="/login" replace/>}/>
+
                 </Routes>
             </AuthProvider>
         </Router>

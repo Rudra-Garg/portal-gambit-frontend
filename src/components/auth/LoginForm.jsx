@@ -18,7 +18,9 @@ const LoginForm = () => {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
+
       navigate('/profile:userId');
+
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in. Please check your credentials.');
@@ -34,6 +36,7 @@ const LoginForm = () => {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+
       navigate('/profile:userId');
       // eslint-disable-next-line no-unused-vars
     } catch (error) {
