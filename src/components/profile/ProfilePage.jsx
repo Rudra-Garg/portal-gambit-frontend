@@ -1,356 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../../firebase/config';
-import { ref, push, get, update } from 'firebase/database';
-import { database } from '../../firebase/config';
-import PortalChessGame from '../game/PortalChessGame';
-import { initialBoardSetup } from '../game/chessLogic';
 
-import './ProfilePage.css';
-const ProfilePage = ({ userId }) => {
-  // Auth and navigation
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  
-  // State for player data
-  const [playerData, setPlayerData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Game setup states
-  const [gameTime, setGameTime] = useState(5);
-  const [playerColor, setPlayerColor] = useState('random');
-  const [isGameLoading, setIsGameLoading] = useState(false);
-  const [showAvailableGames, setShowAvailableGames] = useState(false);
-  const [availableGames, setAvailableGames] = useState([]);
-  const [portalCount, setPortalCount] = useState(2);
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      navigate('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
+import React, { useState } from 'react';
+import GameSetup from './GameSetup';
+import Friends from './Friends';
+import MatchHistory from './MatchHistory';
 
-  // Simulated API call to fetch player data
-  useEffect(() => {
-    const fetchPlayerData = async () => {
-      setIsLoading(true);
-      try {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        
-        const data = {
-          id: userId || 'chess001',
-          username: user?.email || 'mail@gmail.com',
-          avatar: '../../../profile.png',
-          joinDate: '2023-06-15',
-          country: 'United States',
-          age: 28,
-          stats: {
-            wins: 187,
-            losses: 103,
-            draws: 22,
-            winRate: 64.5,
-            totalGames: 312,
-            winPercentage: 60,
-            drawPercentage: 7,
-            lossPercentage: 33
-          },
-          friends: [
-            { id: 'friend1', username: 'ProPlayer', status: 'Online' },
-            { id: 'friend2', username: 'KnightOwl', status: 'Offline' },
-            { id: 'friend3', username: 'JackJon', status: 'Away' },
-            { id: 'friend4', username: 'Alphant', status: 'Online' },
-          ],
-          matches: [
-            {
-              id: 'match001',
-              date: '2025-03-01T18:30:00',
-              opponent: 'ProPlayer',
-              result: 'Victory',
-              timeControl: '5',
-            },
-            {
-              id: 'match002',
-              date: '2025-02-28T20:15:00',
-              opponent: 'KnightOwl',
-              result: 'Defeat',
-              timeControl: '3',
-            },
-            {
-              id: 'match003',
-              date: '2025-02-28T16:40:00',
-              opponent: 'JackJon',
-              result: 'Draw',
-              timeControl: '10',
-            }
-          ]
-        };
-        setPlayerData(data);
-      } catch (error) {
-        console.error('Error fetching player data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+const ProfilePage = () => {
 
-    fetchPlayerData();
-  }, [userId, user]);
+  const [userProfile] = useState({
+    username: 'ChessMaster99',
+    email: 'chessmaster@example.com',
+    gamesPlayed: 127,
+    winRate: '58%',
+    memberSince: '2092-1-12'
+  });
 
-  // Create game function that redirects to dashboard with game parameters
-  const createNewGame = () => {
-    // Pass the gameTime to the dashboard
-    navigate('/dashboard', { 
-      state: { 
-        createGame: true,
-        timeControl: gameTime,  // This is the important part - passing the time
-        playerColor: playerColor
-      } 
-    });
-  };
-
-  const findGames = () => {
-    // Also pass the preferred game time when finding games
-    navigate('/dashboard', { 
-      state: { 
-        findGames: true,
-        preferredTimeControl: gameTime  // Pass preferred time
-      } 
-    });
-  };
-
-  // Join game function that redirects to dashboard
-  const joinGame = (gameId) => {
-    navigate('/dashboard', { state: { joinGameId: gameId } });
-  };
-
-  // Go to dashboard function
-  const goToDashboard = () => {
-    navigate('/dashboard');
-  };
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="profile-loading">
-        <div className="spinner"></div>
-        <p>Loading profile...</p>
-      </div>
-    );
-  }
-
-  // Error state
-  if (!playerData) {
-    return <div className="profile-error">Error loading profile data</div>;
-  }
+  const [activeSection, setActiveSection] = useState('friends'); // Default to "friends"
 
   return (
-    <div className="profile-page-wrapper">
-    <div className="profile-page-container">
-      <div className="profile-grid">
-        {/* Profile Block */}
-        <div className="profile-block">
-          <div className="profile-header">
-            <img 
-              src={playerData.avatar} 
-              alt="Profile" 
-              className="profile-avatar" 
-            />
-            <div className="profile-info">
-              <h2>{playerData.username}</h2>
-              <p>{playerData.email}</p>
-              <div className="profile-actions">
-                <button
-                  onClick={goToDashboard}
-                  className="dashboard-button"
-                >
-                  Go to Dashboard
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="logout-button"
-                >
-                  Logout
-                </button>
-              </div>
+    <div className="container mx-auto px-4 py-10 bg-gray-300 min-h-screen flex flex-col md:flex-row gap-8 text-white">
+      {/* Left Column - User Profile, Friends & Match History */}
+      <div className="md:w-2/5 space-y-6">
+
+        {/* User Profile Header */}
+        <div className="bg-gray-800 rounded-xl p-8 shadow-lg border border-indigo-500 backdrop-blur-lg">
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center text-3xl font-extrabold shadow-lg">
+              {userProfile.username.charAt(0).toUpperCase()}
             </div>
-          </div>
-          
-          <div className="profile-game-stats">
-            <div className="game-stats-grid">
-              <div className="game-stat-item wins">
-                <span className="game-stat-label">Wins</span>
-                <span className="game-stat-value">{playerData.stats.wins}</span>
-                <span className="game-stat-percentage">
-                  {playerData.stats.winPercentage}%
-                </span>
-              </div>
-              <div className="game-stat-item draws">
-                <span className="game-stat-label">Draws</span>
-                <span className="game-stat-value">{playerData.stats.draws}</span>
-                <span className="game-stat-percentage">
-                  {playerData.stats.drawPercentage}%
-                </span>
-              </div>
-              <div className="game-stat-item losses">
-                <span className="game-stat-label">Defeats</span>
-                <span className="game-stat-value">{playerData.stats.losses}</span>
-                <span className="game-stat-percentage">
-                  {playerData.stats.lossPercentage}%
-                </span>
-              </div>
-              <div className="game-stat-item losses">
-                <span className="game-stat-label">Total Games</span>
-                <span className="game-stat-value">{playerData.stats.totalGames}</span>
+            <div>
+              <h1 className="text-3xl font-bold text-indigo-400 tracking-wide">{userProfile.username}</h1>
+              <p className="text-gray-400 text-sm">{userProfile.email}</p>
+              <div className="mt-4 space-y-1 text-gray-300">
+                <div className="text-lg"><span className="font-semibold text-indigo-400">Games Played:</span> {userProfile.gamesPlayed}</div>
+                <div className="text-lg"><span className="font-semibold text-indigo-400">Win Rate:</span> {userProfile.winRate}</div>
+                <div className="text-lg"><span className="font-semibold text-indigo-400">Member Since:</span> {new Date(userProfile.memberSince).toLocaleDateString()}</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Match History Block */}
-        <div className="match-history-block">
-          <h2>Match History</h2>
-          {playerData.matches.map(match => (
-            <div key={match.id} className="match-item">
-              <div className="match-details">
-                <span>{match.opponent}</span>
-                <span className={`match-result ${match.result.toLowerCase()} px-40`}>
-                  {match.result}
-                </span>
-              </div>
-              <div className="match-time">
-                {match.timeControl}
-              </div>
-            </div>
-          ))}
-        </div>
 
-       {/* Game Setup Block with navigation to dashboard */}
-<div className="game-setup-block">
-  <h2>Game Setup</h2>
-  <div className="time-control">
-    <label>Time Control (minutes)</label>
-    <input
-      type="range"
-      min="3"
-      max="10"
-      step="1"
-      value={gameTime}
-      onChange={(e) => setGameTime(Number(e.target.value))}
-    />
-    <div>Selected: {gameTime} minutes</div>
-  </div>
-   
-  <div className="color-selection">
-    <label>Play As</label>
-    <div className="color-buttons">
-      <button
-        className={playerColor === 'white' ? 'active' : ''}
-        onClick={() => setPlayerColor('white')}
-      >
-        White
-      </button>
-      <button
-        className={playerColor === 'black' ? 'active' : ''}
-        onClick={() => setPlayerColor('black')}
-      >
-        Black
-      </button>
-      <button
-        className={playerColor === 'random' ? 'active' : ''}
-        onClick={() => setPlayerColor('random')}
-      >
-        Random
-      </button>
-    </div>
-  </div>
-
-  {/* New Portal Selection Component */}
-  <div className="portal-selection">
-    <label>Number of Portals</label>
-    <div className="portal-buttons">
-      <button
-        className={portalCount === 2 ? 'active' : ''}
-        onClick={() => setPortalCount(2)}
-      >
-        2
-      </button>
-      <button
-        className={portalCount === 3 ? 'active' : ''}
-        onClick={() => setPortalCount(3)}
-      >
-        3
-      </button>
-      <button
-        className={portalCount === 4 ? 'active' : ''}
-        onClick={() => setPortalCount(4)}
-      >
-        4
-      </button>
-    </div>
-  </div>
- 
-  <div className="game-actions">
-    <button
-      onClick={createNewGame}
-      disabled={isGameLoading}
-      className="create-game-button"
-    >
-      Create New Game
-    </button>
-    <button
-      onClick={findGames}
-      disabled={isGameLoading}
-      className="find-games-button"
-    >
-      Find Games
-    </button>
-  </div>
- 
-  {showAvailableGames && availableGames.length > 0 && (
-    <div className="available-games">
-      <h3>Available Games</h3>
-      <div className="games-list">
-        {availableGames.map((game) => (
-          <div key={game.id} className="game-item">
-            <span>
-              {game.white_player_email ? `Game with ${game.white_player_email}` :
-               game.black_player_email ? `Game with ${game.black_player_email}` :
-               'Open Game'}
-            </span>
-            <span className="game-time">{game.time_control || 5} min</span>
+        {/* Toggle Buttons for Friends & Match History */}
+        <div>
+          <div className="flex space-x-4">
             <button
-              onClick={() => joinGame(game.id)}
-              className="join-button"
+              onClick={() => setActiveSection('friends')}
+              className={`w-1/2 px-6 py-3 text-center font-medium rounded-t-lg transition-all duration-300
+              ${activeSection === 'friends'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-gray-700 text-gray-300 hover:bg-indigo-500 hover:text-white'}`}
             >
-              Join
+              Friends
+            </button>
+            <button
+              onClick={() => setActiveSection('matchHistory')}
+              className={`w-1/2 px-6 py-3 text-center font-medium rounded-t-lg transition-all duration-300
+              ${activeSection === 'matchHistory'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'bg-gray-700 text-gray-300 hover:bg-indigo-500 hover:text-white'}`}
+            >
+              Match History
             </button>
           </div>
-        ))}
-      </div>
-    </div>
-  )}
-</div>
-        {/* Friends Block */}
-        <div className="additional-block">
-          <h2>Friends</h2>
-          <div className="friends-list">
-            {playerData.friends.map(friend => (
-              <div key={friend.id} className="friend-item">
-                <span className="friend-name">{friend.username}</span>
-                <span className={`friend-status ${friend.status.toLowerCase()}`}>
-                  {friend.status}
-                </span>
-              </div>
-            ))}
+
+          {/* Expanded Content with Scrollable Section */}
+          <div className="rounded-b-xl shadow-lg overflow-hidden ">
+            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-700">
+              {activeSection === 'friends' && <Friends />}
+              {activeSection === 'matchHistory' && <MatchHistory />}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      {/* Right Column - Game Setup Expands Entire Right Side */}
+      <div className="md:w-3/5">
+        <GameSetup />
+      </div>
     </div>
   );
 };
 
+
 export default ProfilePage;
+

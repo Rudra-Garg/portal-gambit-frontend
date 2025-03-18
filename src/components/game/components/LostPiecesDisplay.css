@@ -1,0 +1,56 @@
+.lost-pieces-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem; /* Maintaining the original gap-1 */
+  padding: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  min-height: 2rem;
+  align-items: center;
+}
+
+.lost-pieces-empty {
+  justify-content: center;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.lost-piece-item {
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem; /* Maintaining the original mr-2 */
+  padding: 2px 4px;
+  border-radius: 3px;
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.piece-symbol {
+  font-size: 1.125rem; /* text-lg equivalent */
+  line-height: 1;
+}
+
+.piece-count {
+  font-size: 0.75rem; /* text-xs equivalent */
+  font-weight: 500;
+  margin-left: 0.25rem;
+  color: #666;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .lost-pieces-container {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .lost-pieces-empty {
+    color: #999;
+  }
+
+  .lost-piece-item {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .piece-count {
+    color: #999;
+  }
+}

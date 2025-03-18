@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ref, update, onValue } from 'firebase/database';
+import {ref, update, onValue, get, remove} from 'firebase/database';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { PortalChess } from './CustomChessEngine';
@@ -11,19 +11,96 @@ import ChatComponent from './components/ChatComponent';
 import { useLostPieces } from './hooks/useLostPieces';
 import { useChat } from './hooks/useChat';
 import { useVoiceChat } from './hooks/useVoiceChat';
+import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
+import {useNavigate} from "react-router-dom";
 
-const PortalChessGame = ({ gameId }) => {
+const PortalChessGame = () => {
   const [game, setGame] = useState(() => new PortalChess());
   const [portalMode, setPortalMode] = useState(false);
   const [portalStart, setPortalStart] = useState(null);
   const [selectedSquare, setSelectedSquare] = useState(null);
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
-  const [moveHistory, setMoveHistory] = useState([]);
-  
+  const [gameId, setGameId] = useState(null);
+  const[activeGame,setActiveGame]=useState(null);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const urlObj = new URL(window.location.href);
+        setGameId(urlObj.searchParams.get('gameId'));
+        setActiveGame(urlObj.searchParams.get('gameId'))
+      } catch (error) {
+        console.error("Invalid URL:", error);
+        setGameId(null);
+      }
+    } else {
+      setGameId(null);
+    }
+  }, [setGameId]); // Add setGameId to the dependency array
+
+
+  const exitGame = async () => {
+    if (activeGame) {
+      try {
+        // Get current game data
+        const gameSnapshot = await get(ref(database, `games/${activeGame}`));
+        const gameData = gameSnapshot.val();
+
+        if (!gameData) {
+          console.error('Game not found');
+          setActiveGame(null);
+          // setShowAvailableGames(false);
+          return;
+        }
+
+        const updateData = {};
+
+        // Determine which player is leaving
+        if (gameData.white_player === user.uid) {
+          updateData.white_player = null;
+          updateData.white_player_name = null;
+          updateData.white_player_email = null;
+        } else if (gameData.black_player === user.uid) {
+          updateData.black_player = null;
+          updateData.black_player_name = null;
+          updateData.black_player_email = null;
+        }
+
+        // Check if both players will be gone after this update
+        const bothPlayersLeaving =
+          (gameData.white_player === user.uid || !gameData.white_player) &&
+          (gameData.black_player === user.uid || !gameData.black_player);
+
+        if (bothPlayersLeaving) {
+          // Delete the game if both players have left
+          await remove(ref(database, `games/${activeGame}`));
+          console.log('Game deleted as both players have left');
+        } else {
+          // Update the game with the player removed
+          await update(ref(database, `games/${activeGame}`), updateData);
+          console.log('Player removed from game');
+        }
+
+        setActiveGame(null);
+        navigate('/profile:userId');
+        // setShowAvailableGames(false);
+      } catch (error) {
+        console.error('Error exiting game:', error);
+      }
+    } else {
+      setActiveGame(null);
+      // setShowAvailableGames(false);
+    }
+  };
+  // Use the custom hooks
+  const moveHistory = useMoveHistory(gameId);
   const [lostPieces, updateLostPieces] = useLostPieces(game);
   const { chatMessages, newMessage, setNewMessage, sendMessage } = useChat(gameId, user);
+  
   const {
     voiceChatEnabled,
     isMuted,
@@ -53,8 +130,7 @@ const PortalChessGame = ({ gameId }) => {
           newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
           
           setGame(newGame);
-          updateMoveHistory();
-          updateLostPieces();
+          updateLostPieces(newGame);
           
         } catch (error) {
           console.error('Error initializing chess game:', error);
@@ -63,7 +139,7 @@ const PortalChessGame = ({ gameId }) => {
     });
 
     return () => unsubscribe();
-  }, [gameId]);
+  }, [gameId, updateLostPieces]);
 
   const isMyTurn = useCallback(() => {
     if (!gameState || !user) return false;
@@ -127,8 +203,7 @@ const PortalChessGame = ({ gameId }) => {
         });
   
         setGame(newGame);
-        updateMoveHistory();
-        updateLostPieces();
+        updateLostPieces(newGame);
   
         return true;
       }
@@ -137,7 +212,7 @@ const PortalChessGame = ({ gameId }) => {
       console.error('Error making move:', error);
       return false;
     }
-  }, [game, gameState, gameId, isMyTurn]);
+  }, [game, gameState, gameId, isMyTurn, updateLostPieces]);
 
   const handleSquareClick = useCallback((square) => {
     if (!portalMode) {
@@ -178,20 +253,28 @@ const PortalChessGame = ({ gameId }) => {
         }
       }
     }
-  }, [portalMode, selectedSquare, game, portalStart, gameState, gameId]);
+  }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
 
-  const updateMoveHistory = useCallback(() => {
-    const history = game.history({ verbose: true });
-    setMoveHistory(history);
-  }, [game]);
+  const amIWhitePlayer = gameState?.white_player === user?.uid;
+  
+  // Get player names from gameState
+  const whitePlayerName = gameState?.white_player_name || "White Player";
+  const blackPlayerName = gameState?.black_player_name || "Black Player";
+
+  // Determine player colors
+  const topPlayerColor = amIWhitePlayer ? 'black' : 'white';
+  const bottomPlayerColor = amIWhitePlayer ? 'white' : 'black';
 
   return (
-    <div className="portal-chess-container flex flex-col md:flex-row w-full h-screen">
-      <div className="w-full md:w-1/2 bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 p-2 flex flex-col h-full max-h-screen overflow-hidden shadow-lg border border-purple-200">
+    <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
+      <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden">
         <PlayerInfo 
+          isTopPlayer={true}
           playerNumber={2}
-          playerName="OPPONENT 2"
-          lostPieces={lostPieces.black}
+          playerName={amIWhitePlayer ? blackPlayerName : whitePlayerName}
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
+          lostPieces={lostPieces}
+          playerColor={topPlayerColor}
         />
         
         <ChessboardWrapper 
@@ -207,18 +290,22 @@ const PortalChessGame = ({ gameId }) => {
         />
         
         <PlayerInfo 
+          isTopPlayer={false}
           playerNumber={1}
-          playerName="OPPONENT 1"
-          lostPieces={lostPieces.white}
+          playerName={amIWhitePlayer ? whitePlayerName : blackPlayerName}
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
+          lostPieces={lostPieces}
+          playerColor={bottomPlayerColor}
         />
       </div>
 
-      <div className="w-full md:w-1/2 bg-green-400 p-2 flex flex-col h-full">
+      <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full">
         <GameHistory 
           moveHistory={moveHistory}
           portalMode={portalMode}
           setPortalMode={setPortalMode}
           isMyTurn={isMyTurn}
+          exit={exitGame}
         />
         
         <ChatComponent 
@@ -238,10 +325,6 @@ const PortalChessGame = ({ gameId }) => {
       </div>
     </div>
   );
-};
-
-PortalChessGame.propTypes = {
-  gameId: PropTypes.string.isRequired
 };
 
 export default PortalChessGame;
