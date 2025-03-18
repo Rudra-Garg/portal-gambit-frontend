@@ -38,7 +38,7 @@ const Friends = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-lg min-h-[500px] border border-gray-100">
+    <div className="bg-white rounded-b-xl p-6 shadow-lg border border-gray-100">
       {/* Header */}
       <h2 className="text-2xl font-bold text-indigo-700 mb-6">Friends</h2>
       

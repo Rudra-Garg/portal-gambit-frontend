@@ -29,7 +29,7 @@ const MatchHistory = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-lg min-h-[500px] border border-gray-100">
+    <div className="bg-white rounded-b-xl p-6 shadow-lg min-h-[500px] border border-gray-100">
       <h2 className="text-2xl font-bold text-gray-800 mb-6">Match History</h2>
       
       <div className="flex gap-2 mb-6">

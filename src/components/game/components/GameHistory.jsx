@@ -59,13 +59,7 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
                         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm transition-all hover:shadow-md">
                           <div className="h-3 w-3 rounded-full bg-blue-500 flex-shrink-0"></div>
                           <div className="text-blue-800 text-sm font-medium">
-                            {whiteMove.piece.toUpperCase() + whiteMove.from + whiteMove.to}
-                            {whiteMove.captured && (
-                              <span className="font-bold text-blue-800 inline-flex items-center">
-                                {" x "}
-                                {whiteMove.captured.toUpperCase()}
-                              </span>
-                            )}
+                            {whiteMove.san}
                           </div>
                         </div>
                       )}
@@ -75,13 +69,7 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
                         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 shadow-sm transition-all hover:shadow-md">
                           <div className="h-3 w-3 rounded-full bg-purple-500 flex-shrink-0"></div>
                           <div className="text-purple-800 text-sm font-medium">
-                            {blackMove.piece.toUpperCase() + blackMove.from + blackMove.to}
-                            {blackMove.captured && (
-                              <span className="font-bold text-purple-800 inline-flex items-center">
-                                {" x "}
-                                {blackMove.captured.toUpperCase()}
-                              </span>
-                            )}
+                            {blackMove.san}
                           </div>
                         </div>
                       )}
