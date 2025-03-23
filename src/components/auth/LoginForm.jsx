@@ -18,15 +18,11 @@ const LoginForm = () => {
     setError('');
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      if (!userCredential.user.emailVerified) {
-        await sendEmailVerification(userCredential.user);
-        setError('Please verify your email before logging in. A new verification email has been sent.');
-        return;
-      }
+      await signInWithEmailAndPassword(auth, email, password);
 
       navigate('/profile:userId');
+
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in. Please check your credentials.');
     } finally {
@@ -40,13 +36,7 @@ const LoginForm = () => {
 
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      if (!result.user.emailVerified) {
-        await sendEmailVerification(result.user);
-        setError('Please verify your email before logging in. A verification email has been sent.');
-        return;
-      }
+      await signInWithPopup(auth, provider);
 
       navigate('/profile:userId');
     } catch (error) {
