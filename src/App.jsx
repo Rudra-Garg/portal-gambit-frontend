@@ -24,16 +24,14 @@ const App = () => {
                             </PrivateRoute>
                         }
                     />
-                     <Route
-
-                        path="/profile:userId"
-
-                        element={
-                            <PrivateRoute>
-                                <ProfilePage />
-                            </PrivateRoute>
-                        }
-                    />
+                   <Route
+    path="/profile/:userId"  // Note the change from :userId to /:userId
+    element={
+        <PrivateRoute>
+            <ProfilePage />
+        </PrivateRoute>
+    }
+/>
                   <Route
                     path="/gameScreen"
                     element={
