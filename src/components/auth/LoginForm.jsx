@@ -11,15 +11,22 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // Update the navigation path
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        await sendEmailVerification(userCredential.user);
+        setError('Please verify your email before logging in. A new verification email has been sent.');
+        return;
+      }
+
       navigate('/profile:userId');
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in. Please check your credentials.');
     } finally {
@@ -33,9 +40,15 @@ const LoginForm = () => {
 
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      if (!result.user.emailVerified) {
+        await sendEmailVerification(result.user);
+        setError('Please verify your email before logging in. A verification email has been sent.');
+        return;
+      }
+
       navigate('/profile:userId');
-      // eslint-disable-next-line no-unused-vars
     } catch (error) {
       setError('Failed to sign in with Google');
     } finally {
@@ -44,85 +57,130 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="h-screen flex justify-center items-center relative">
-         <video
-        autoPlay
-        loop
-        muted
-        className="absolute inset-0 w-full h-full object-cover"
-      >
-        <source src="/background.mp4" type="video/mp4" />
-        Your browser does not support the video tag.
-      </video>
+    <div className="min-h-screen relative bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      {/* Background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[url('/chess-pattern.png')] opacity-10 bg-repeat"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-blue-500/5"></div>
+      </div>
 
-      <div className="relative z-10 bg-black-500 bg-opacity-50 backdrop-blur-lg p-8 rounded-2xl shadow-lg w-96">
-      <h1 className="p-3 text-4xl font-bold text-center blur-[0.5px]">
-          <span className="bg-gradient-to-r from-green-500 to-blue-600 inline-block text-transparent bg-clip-text">
-            PORTAL GAMBIT
-          </span>
-        </h1>
-       
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-        
-            <input
-              type="email"
-              id="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-               className="w-full bg-white py-2 px-3 mt-4 rounded focus:ring-2 focus:ring-green-400"
-              required
-            />
+      {/* Main content container */}
+      <div className="relative container mx-auto px-4 py-12 flex flex-col lg:flex-row items-center justify-between gap-12">
+        {/* Left side - Game Information */}
+        <div className="lg:w-1/2 space-y-8">
+          <div className="space-y-4">
+            <h1 className="text-6xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+              Portal Gambit
+            </h1>
+            <p className="text-2xl text-gray-700">
+              Where Chess Meets Portal Mechanics
+            </p>
           </div>
 
-          <div>
-           
-            <input
-             placeholder="Password"
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white py-2 px-3 mt-4 rounded focus:ring-2 focus:ring-green-400"
-              required
-            />
-          </div>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold text-indigo-600">Revolutionary Chess Experience</h2>
+              <p className="text-gray-600">
+                Challenge traditional chess strategies with the power of portals. 
+                Move pieces through dimensional gates and create unprecedented tactical opportunities.
+              </p>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-             className="w-full bg-gradient-to-r from-green-400 to-yellow-400 py-2 mt-4 rounded text-white font-bold hover:opacity-80 transition"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-
-        </form>
-
-        <div className="relative">
-        
-          <div className="relative flex justify-center text-sm">
-            <span className="p-2 px-5 text-white">Or continue with</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                <h3 className="text-indigo-600 font-medium mb-2">Portal Mechanics</h3>
+                <p className="text-sm text-gray-600">Place portals strategically to create new pathways for your pieces</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg shadow-md border border-gray-200">
+                <h3 className="text-blue-600 font-medium mb-2">Real-time Matches</h3>
+                <p className="text-sm text-gray-600">Challenge players worldwide in this innovative chess variant</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          disabled={loading}
-          className="w-full flex items-center justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-        >
-          <FcGoogle className="h-5 w-5 mr-2" />
-          Sign in with Google
-        </button>
+        {/* Right side - Login Form */}
+        <div className="lg:w-1/2 max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h2>
+              <p className="text-gray-600">Sign in to continue your chess journey</p>
+            </div>
 
-        <p className="text-center mt-4 text-white">
-          Don&#39;t have an account?{' '}
-          <Link to="/signup" className="text-blue-600 hover:text-blue-800">
-            Sign up
-          </Link>
-        </p>
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 px-4 py-3 mb-6 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            >
+              <FcGoogle className="w-5 h-5" />
+              <span className="text-gray-700 font-medium">Continue with Google</span>
+            </button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-4 text-sm text-gray-500 bg-white">or continue with email</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email address"
+                  className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  className="w-full px-4 py-3 bg-gray-50 rounded-lg border border-gray-300 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+                    Signing in...
+                  </span>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </form>
+
+            <p className="mt-6 text-center text-gray-600">
+              New to Portal Gambit?{' '}
+              <Link to="/signup" className="text-indigo-600 hover:text-indigo-500 font-medium">
+                Create account
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
