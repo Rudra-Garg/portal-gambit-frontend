@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import GameSetup from './GameSetup';
 import Friends from './Friends';
 import MatchHistory from './MatchHistory';
@@ -38,7 +37,6 @@ const ProfilePage = () => {
             </div>
           </div>
         </div>
-
 
         {/* Toggle Buttons for Friends & Match History */}
         <div>
@@ -80,6 +78,4 @@ const ProfilePage = () => {
   );
 };
 
-
 export default ProfilePage;
-

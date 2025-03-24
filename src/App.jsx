@@ -5,29 +5,19 @@ import PrivateRoute from './components/auth/PrivateRoute.jsx';
 import Dashboard from './components/dashboard.jsx';
 import SignupForm from './components/auth/SignUpForm.jsx';
 import ProfilePage from './components/profile/ProfilePage.jsx';
-
-import PortalChessGame from "./components/game/PortalChessGame.jsx";  // Import the ProfilePage
-
+import PortalChessGame from "./components/game/PortalChessGame.jsx";
+import LandingPage from "./components/LandingPage.jsx";
 
 const App = () => {
     return (
         <Router>
             <AuthProvider>
                 <Routes>
-                    <Route path="/login" element={<LoginForm />} />
-                    <Route path="/signup" element={<SignupForm />} />
+                    {/*<Route path="/login" element={<LoginForm />} />*/}
+                    {/*<Route path="/signup" element={<SignupForm />} />*/}
+
                     <Route
-                        path="/dashboard"
-                        element={
-                            <PrivateRoute>
-                                <Dashboard />
-                            </PrivateRoute>
-                        }
-                    />
-                     <Route
-
                         path="/profile:userId"
-
                         element={
                             <PrivateRoute>
                                 <ProfilePage />
@@ -43,8 +33,7 @@ const App = () => {
                         }
                     />
 
-                  <Route path="/" element={<Navigate to="/login" replace/>}/>
-
+                    <Route path="/" element={<LandingPage />} />
                 </Routes>
             </AuthProvider>
         </Router>

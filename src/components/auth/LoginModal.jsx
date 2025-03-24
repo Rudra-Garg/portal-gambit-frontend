@@ -26,7 +26,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             }
 
             onClose();
-            navigate('/dashboard');
+            navigate('/profile:userId');
         } catch (error) {
             setError('Failed to sign in. Please check your credentials.');
         } finally {
@@ -49,7 +49,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             }
 
             onClose();
-            navigate('/dashboard');
+            navigate('/profile:userId');
         } catch (error) {
             setError('Failed to sign in with Google');
         } finally {

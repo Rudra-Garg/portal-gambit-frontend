@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     BiChevronRight,
-    BiCircle,
-    BiGroup,
-    BiJoystick,
-    BiTargetLock
+    BiGroup
 } from 'react-icons/bi';
 import { GiChessKnight, GiPortal } from 'react-icons/gi';
 import Modal from './common/Modal';
@@ -15,8 +12,7 @@ import SignupModal from './auth/SignupModal';
 const LandingPage = () => {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-    const navigate = useNavigate();
-
+    useNavigate();
     const handleLoginClick = () => {
         setIsLoginModalOpen(true);
     };
@@ -207,7 +203,7 @@ const LandingPage = () => {
                             </div>
                             <h3 className="text-xl font-bold mb-3">Portal Movement</h3>
                             <p className="text-gray-600">
-                                When a piece's movement path intersects with a portal, it automatically teleports through and continues its movement from the exit portal.
+                                When a piece&#39;s movement path intersects with a portal, it automatically teleports through and continues its movement from the exit portal.
                             </p>
                         </div>
 
