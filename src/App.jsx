@@ -13,8 +13,8 @@ const App = () => {
         <Router>
             <AuthProvider>
                 <Routes>
-                    {/*<Route path="/login" element={<LoginForm />} />*/}
-                    {/*<Route path="/signup" element={<SignupForm />} />*/}
+                    {/* <Route path="/login" element={<LoginForm />} />
+                    <Route path="/signup" element={<SignupForm />} /> */}
 
                     <Route
                         path="/profile:userId"

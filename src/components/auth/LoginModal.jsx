@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +10,21 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [verificationMessage, setVerificationMessage] = useState('');
     const navigate = useNavigate();
+
+    const saveAuthToken = (user) => {
+        try {
+            user.getIdToken().then((token) => {
+                localStorage.setItem('access_token', token);
+                localStorage.setItem('userId', user.uid);
+                localStorage.setItem('userEmail', user.email);
+                localStorage.setItem('emailVerified', user.emailVerified);
+            });
+        } catch (error) {
+            console.error('Error saving auth token:', error);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -18,17 +33,28 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            console.log(userCredential);
+            const user = userCredential.user;
 
-            if (!userCredential.user.emailVerified) {
+            if (!user.emailVerified) {
                 await sendEmailVerification(userCredential.user);
-                setError('Please verify your email before logging in. A new verification email has been sent.');
+                setVerificationMessage('Please verify your email before logging in. Verification link sent.');
+                setLoading(false);
                 return;
             }
 
+            const userId = user.uid;
+            saveAuthToken(userCredential.user);
             onClose();
-            navigate('/profile:userId');
+            navigate(`/profile:userId`);
         } catch (error) {
-            setError('Failed to sign in. Please check your credentials.');
+            console.log(error);
+
+            if (error.code === 'auth/too-many-requests') {
+                setError('Too many failed login attempts. Please try again later or reset your password.');
+            } else {
+                setError('Failed to sign in. Please check your credentials.');
+            }
         } finally {
             setLoading(false);
         }
@@ -39,17 +65,19 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
         setError('');
 
         try {
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, new GoogleAuthProvider());
+            const user = result.user;
 
-            if (!result.user.emailVerified) {
-                await sendEmailVerification(result.user);
-                setError('Please verify your email before logging in. A verification email has been sent.');
+            if (!user.emailVerified) {
+                setError('This email address is not verified.');
                 return;
             }
 
+            const userId = result.user.uid;
+            console.log(result.user);
+            saveAuthToken(result.user);
             onClose();
-            navigate('/profile:userId');
+            navigate(`/profile:userId`);
         } catch (error) {
             setError('Failed to sign in with Google');
         } finally {
@@ -58,21 +86,33 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
     };
 
     return (
-        <div className="space-y-6">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6">
+
+
             {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
                     {error}
-                </div>
+                </motion.div>
             )}
 
-            <button
+            <motion.button
                 onClick={handleGoogleSignIn}
                 disabled={loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 mb-6 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
                 <FcGoogle className="w-5 h-5" />
                 <span className="text-gray-700 font-medium">Continue with Google</span>
-            </button>
+            </motion.button>
 
             <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
@@ -85,53 +125,60 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
 
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                        Email
+                    </label>
                     <input
                         type="email"
+                        id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Email"
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                         required
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                 </div>
                 <div>
+                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                        Password
+                    </label>
                     <input
                         type="password"
+                        id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password"
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-300"
                         required
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                 </div>
-                {error && <div className="text-red-500 text-sm">{error}</div>}
-                <button
+
+                {verificationMessage && (
+                    <div className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded mt-2">
+                        {verificationMessage}
+                    </div>
+                )}
+
+                <motion.button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
                 >
                     {loading ? 'Signing in...' : 'Sign In'}
-                </button>
-                <button
-                    type="button"
-                    onClick={handleGoogleSignIn}
-                    className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 py-2 rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
-                >
-                    <FcGoogle size={20} />
-                    Sign in with Google
-                </button>
+                </motion.button>
             </form>
 
             <div className="text-sm text-center">
                 <span className="text-gray-600">Don't have an account? </span>
-                <button
+                <motion.button
                     onClick={onSwitchToSignup}
+                    whileHover={{ scale: 1.05 }}
                     className="text-indigo-600 hover:text-indigo-500 font-medium"
                 >
                     Sign up
-                </button>
+                </motion.button>
             </div>
-        </div>
+        </motion.div>
     );
 };
 

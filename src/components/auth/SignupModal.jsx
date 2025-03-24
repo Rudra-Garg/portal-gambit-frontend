@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
@@ -12,8 +13,22 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const [verificationMessage, setVerificationMessage] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    const saveAuthToken = (user) => {
+        try {
+            user.getIdToken().then((token) => {
+                localStorage.setItem('access_token', token);
+                localStorage.setItem('userId', user.uid);
+                localStorage.setItem('userEmail', user.email);
+                localStorage.setItem('emailVerified', user.emailVerified);
+            });
+        } catch (error) {
+            console.error('Error saving auth token:', error);
+        }
+    };
 
     const validatePassword = (password) => {
         const minLength = 8;
@@ -58,7 +73,10 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
             });
             await sendEmailVerification(userCredential.user);
 
-            setMessage('Verification email sent! Please check your inbox and verify your email before continuing.');
+            console.log(userCredential);
+            saveAuthToken(userCredential.user);
+            setVerificationMessage('Verification email sent! Please check your inbox and verify your email before continuing.');
+
             setLoading(false);
 
             // Set up listener for email verification
@@ -66,11 +84,12 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                 if (user?.emailVerified) {
                     unsubscribe();
                     onClose();
-                    navigate('/dashboard');
+                    navigate(`/profile:userId`);
                 }
             });
 
         } catch (error) {
+            console.log(error);
             setError('Failed to create account: ' + error.message);
             setLoading(false);
         }
@@ -81,15 +100,18 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
         setError('');
 
         try {
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
+            const result = await signInWithPopup(auth, new GoogleAuthProvider());
+            const user = result.user;
 
-            if (result.user.emailVerified) {
-                onClose();
-                navigate('/dashboard');
-            } else {
-                setMessage('Please verify your email before continuing.');
+            if (!user.emailVerified) {
+                setError('This email address is not verified.');
+                return;
             }
+
+            console.log(result.user);
+            saveAuthToken(result.user);
+            onClose();
+            navigate(`/profile:userId`);
         } catch (error) {
             setError('Failed to sign in with Google');
         } finally {
@@ -98,33 +120,43 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
     };
 
     return (
-        <div className="space-y-6">
+        <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6">
             {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
                     {error}
-                </div>
+                </motion.div>
             )}
 
-            <button
+            <motion.button
                 onClick={handleGoogleSignup}
                 disabled={loading}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 className="w-full flex items-center justify-center gap-3 px-4 py-3 mb-6 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors"
             >
                 <FcGoogle className="w-5 h-5" />
                 <span className="text-gray-700 font-medium">Sign up with Google</span>
-            </button>
+            </motion.button>
 
-            <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center">
+            <motion.div className="relative my-6">
+                <motion.div className="absolute inset-0 flex items-center">
+                    <motion.div className="w-full border-t border-gray-200"></motion.div>
+                </motion.div>
+                <motion.div className="relative flex justify-center">
                     <span className="px-4 text-sm text-gray-500 bg-white">or sign up with email</span>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             <form onSubmit={handleEmailSignup} className="space-y-4">
-                <div>
+                <motion.div>
                     <label htmlFor="username" className="block text-sm font-medium text-gray-700">
                         Username
                     </label>
@@ -136,9 +168,9 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                         required
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                </div>
+                </motion.div>
 
-                <div>
+                <motion.div>
                     <label htmlFor="displayName" className="block text-sm font-medium text-gray-700">
                         Full Name
                     </label>
@@ -150,9 +182,9 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                         required
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                </div>
+                </motion.div>
 
-                <div>
+                <motion.div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                         Email
                     </label>
@@ -164,9 +196,9 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                         required
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                </div>
+                </motion.div>
 
-                <div>
+                <motion.div>
                     <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                         Password
                     </label>
@@ -178,9 +210,9 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                         required
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                </div>
+                </motion.div>
 
-                <div>
+                <motion.div>
                     <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700">
                         Confirm Password
                     </label>
@@ -192,27 +224,36 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                         required
                         className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
-                </div>
+                </motion.div>
 
-                <button
+                {verificationMessage && (
+                    <motion.div className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded mt-2">
+                        {verificationMessage}
+                    </motion.div>
+                )}
+
+                <motion.button
                     type="submit"
                     disabled={loading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                     className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
                 >
                     {loading ? 'Creating account...' : 'Sign up'}
-                </button>
+                </motion.button>
             </form>
 
-            <div className="text-sm text-center">
+            <motion.div className="text-sm text-center">
                 <span className="text-gray-600">Already have an account? </span>
-                <button
+                <motion.button
                     onClick={onSwitchToLogin}
+                    whileHover={{ scale: 1.05 }}
                     className="text-indigo-600 hover:text-indigo-500 font-medium"
                 >
                     Sign in
-                </button>
-            </div>
-        </div>
+                </motion.button>
+            </motion.div>
+        </motion.div >
     );
 };
 
