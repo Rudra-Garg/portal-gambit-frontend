@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup,sendEmailVerification } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { useNavigate, Link } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
@@ -9,26 +9,53 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
   const navigate = useNavigate();
 
-  // Update the navigation path
+
+
+  const saveAuthToken = (user) => {
+    try {
+      // Get the auth token
+      user.getIdToken().then((token) => {
+        // Save token and user data in localStorage
+        localStorage.setItem('access_token', token);
+        localStorage.setItem('userId', user.uid);
+        localStorage.setItem('userEmail', user.email);
+      });
+    } catch (error) {
+      console.error('Error saving auth token:', error);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
+  
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      if (!userCredential.user.emailVerified) {
+
+      console.log(userCredential);
+      const user = userCredential.user;
+      if (!user.emailVerified) {
         await sendEmailVerification(userCredential.user);
-        setError('Please verify your email before logging in. A new verification email has been sent.');
+        setVerificationMessage('Please verify your email before logging in. Verification link sent.');
+        setLoading(false);
         return;
       }
+      const userId = user.uid;
+      saveAuthToken(userCredential.user);
+      navigate(`/profile/${userId}`);
 
-      navigate('/profile:userId');
     } catch (error) {
-      setError('Failed to sign in. Please check your credentials.');
+      console.log(error);
+      
+      if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed login attempts. Please try again later or reset your password.');
+      } else {
+        setError('Failed to sign in. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -37,18 +64,21 @@ const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setError('');
-
+  
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      
-      if (!result.user.emailVerified) {
-        await sendEmailVerification(result.user);
-        setError('Please verify your email before logging in. A verification email has been sent.');
+
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      const user = result.user;
+
+      if (!user.emailVerified) {
+        setError('This email address is not verified.');
         return;
       }
+      const userId = result.user.uid;
+      console.log(result.user);
+      saveAuthToken(result.user);
+      navigate(`/profile/${userId}`);
 
-      navigate('/profile:userId');
     } catch (error) {
       setError('Failed to sign in with Google');
     } finally {
@@ -77,6 +107,7 @@ const LoginForm = () => {
             </p>
           </div>
 
+
           <div className="space-y-6">
             <div className="space-y-2">
               <h2 className="text-xl font-semibold text-indigo-600">Revolutionary Chess Experience</h2>
@@ -96,6 +127,8 @@ const LoginForm = () => {
                 <p className="text-sm text-gray-600">Challenge players worldwide in this innovative chess variant</p>
               </div>
             </div>
+
+          
           </div>
         </div>
 

@@ -24,6 +24,7 @@ const App = () => {
                             </PrivateRoute>
                         }
                     />
+
                     <Route
                         path="/gameScreen"
                         element={
@@ -32,6 +33,7 @@ const App = () => {
                             </PrivateRoute>
                         }
                     />
+
 
                     <Route path="/" element={<LandingPage />} />
                 </Routes>

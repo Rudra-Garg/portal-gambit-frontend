@@ -106,20 +106,20 @@ const SignupForm = () => {
               required
             />
             <input
-              type="password"
-              id="password"
-               placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-white py-2 px-3 mt-2 rounded focus:ring-2 focus:ring-green-400"
-              required
-            />
-            <input
              id="email"
               type="email"
               value={email}
               placeholder="Email"
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-white py-2 px-3 mt-2 rounded focus:ring-2 focus:ring-green-400"
+              required
+            /> 
+            <input
+              type="password"
+              id="password"
+               placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-white py-2 px-3 mt-2 rounded focus:ring-2 focus:ring-green-400"
               required
             />

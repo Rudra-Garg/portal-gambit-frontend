@@ -1,8 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import LostPiecesDisplay from './LostPiecesDisplay';
+const formatTime = (seconds) => {
+  if (seconds === null) return '--:--';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
 
-const PlayerInfo = ({ isTopPlayer, playerNumber, playerName, isMyTurn, lostPieces, playerColor }) => {
+const PlayerInfo = ({ isTopPlayer, playerNumber, playerName, isMyTurn, lostPieces, playerColor,timeRemaining }) => {
   return (
     <div className="bg-white p-1 rounded-lg shadow-md mb-1 flex flex-col border border-gray-100">
       <div className="flex items-center justify-between">
@@ -20,7 +26,9 @@ const PlayerInfo = ({ isTopPlayer, playerNumber, playerName, isMyTurn, lostPiece
           </div>
         </div>
         <div className="flex items-center bg-gray-50 px-4 py-1 rounded-full">
-          <div className="font-bold text-gray-800 text-xs">00:00</div>
+        <div className="timer-display text-xl font-bold">
+  {formatTime(timeRemaining)}
+</div>
         </div>
       </div>
       
