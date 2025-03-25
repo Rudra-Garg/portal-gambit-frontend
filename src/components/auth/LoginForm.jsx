@@ -13,78 +13,195 @@ const LoginForm = () => {
   const navigate = useNavigate();
 
 
+  const checkAndCreateProfile = async (user) => {
 
-  const saveAuthToken = (user) => {
     try {
-      // Get the auth token
-      user.getIdToken().then((token) => {
-        // Save token and user data in localStorage
-        localStorage.setItem('access_token', token);
-        localStorage.setItem('userId', user.uid);
-        localStorage.setItem('userEmail', user.email);
+      // First check if profile exists
+      const checkResponse = await fetch(`http://127.0.0.1:8000/profiles/${user.uid}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        }
       });
+  
+      if (checkResponse.status === 404) {
+        // Profile doesn't exist, create one
+        const createResponse = await fetch('http://127.0.0.1:8000/profiles/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          },
+          body: JSON.stringify({
+            display_name: user.displayName || 'Chess Player',
+            draws: 0,
+            email: user.email,
+            games_played: 0,
+            losses: 0,
+            rating: 1200,
+            uid: user.uid,
+            username: user.email.split('@')[0],
+            wins: 0
+          })
+        });
+  
+        if (!createResponse.ok) {
+          throw new Error('Failed to create profile');
+        }
+      } else if (!checkResponse.ok) {
+        throw new Error('Failed to check profile');
+      }
     } catch (error) {
-      console.error('Error saving auth token:', error);
+      console.error('Profile check/create error:', error);
+      throw new Error('Failed to setup user profile');
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-  
+  const exchangeTokenWithBackend = async (firebaseToken) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-      console.log(userCredential);
-      const user = userCredential.user;
-      if (!user.emailVerified) {
-        await sendEmailVerification(userCredential.user);
-        setVerificationMessage('Please verify your email before logging in. Verification link sent.');
-        setLoading(false);
-        return;
+      // Add a small delay to handle clock synchronization issues
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      const response = await fetch('http://127.0.0.1:8000/auth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firebase_token: firebaseToken,
+          timestamp: Math.floor(Date.now() / 1000) // Add current timestamp
+        })
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.detail?.includes('Token used too early')) {
+          // Retry once after a longer delay
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          return exchangeTokenWithBackend(firebaseToken);
+        }
+        throw new Error(errorData.detail || 'Backend authentication failed');
       }
-      const userId = user.uid;
-      saveAuthToken(userCredential.user);
-      navigate(`/profile/${userId}`);
+  
+      const data = await response.json();
+      if (!data.access_token) {
+        throw new Error('Invalid response from backend');
 
+      }
+  
+      return data;
     } catch (error) {
-      console.log(error);
+      console.error('Backend token exchange error:', error);
+      throw error;
+    }
+  };
+
+  const saveAuthToken = async (user) => {
+    try {
+
+      console.log('Getting Firebase token...');
+      const firebaseToken = await user.getIdToken(true);
       
-      if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed login attempts. Please try again later or reset your password.');
-      } else {
-        setError('Failed to sign in. Please check your credentials.');
+      console.log('Exchanging token with backend...');
+      let retryCount = 0;
+      while (retryCount < 3) {
+        try {
+          const backendTokens = await exchangeTokenWithBackend(firebaseToken);
+          
+          if (!backendTokens.access_token) {
+            throw new Error('Invalid token response from backend');
+          }
+          
+          // Save tokens
+          localStorage.setItem('firebase_token', firebaseToken);
+          localStorage.setItem('access_token', backendTokens.access_token);
+          localStorage.setItem('token_type', backendTokens.token_type);
+          localStorage.setItem('userId', user.uid);
+          localStorage.setItem('userEmail', user.email);
+          
+          return; // Success
+        } catch (error) {
+          if (error.message.includes('Token used too early') && retryCount < 2) {
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            continue;
+          }
+          throw error;
+        }
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError('');
-  
-    try {
-
-      const result = await signInWithPopup(auth, new GoogleAuthProvider());
-      const user = result.user;
-
-      if (!user.emailVerified) {
-        setError('This email address is not verified.');
-        return;
-      }
-      const userId = result.user.uid;
-      console.log(result.user);
-      saveAuthToken(result.user);
-      navigate(`/profile/${userId}`);
 
     } catch (error) {
-      setError('Failed to sign in with Google');
-    } finally {
-      setLoading(false);
+      console.error('Error saving auth tokens:', error);
+      throw new Error(
+        error.message.includes('Token used too early')
+          ? 'Please check your system clock and try again'
+          : 'Failed to complete authentication process'
+      );
     }
   };
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
+
+  try {
+    // Firebase authentication
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    if (!user.emailVerified) {
+      await sendEmailVerification(user);
+      setVerificationMessage('Please verify your email before logging in. Verification link sent.');
+      setLoading(false);
+      return;
+    }
+
+    // Save tokens and authenticate with backend
+    await saveAuthToken(user);
+    await checkAndCreateProfile(user);
+    navigate(`/profile/${user.uid}`);
+  } catch (error){
+    console.log(error);
+    if (error.code === 'auth/too-many-requests') {
+      setError('Too many failed login attempts. Please try again later.');
+    } else if (error.message.includes('Backend authentication failed')) {
+      setError('Backend authentication failed. Please try again.');
+    } else if (error.message.includes('Failed to setup user profile')) {
+      setError('Failed to setup user profile. Please try again.');
+    } else {
+      setError('Failed to sign in. Please check your credentials.');
+    }
+  }finally {
+    setLoading(false);
+  }
+};
+
+const handleGoogleSignIn = async () => {
+  setLoading(true);
+  setError('');
+
+  try {
+    const result = await signInWithPopup(auth, new GoogleAuthProvider());
+    const user = result.user;
+
+    if (!user.emailVerified) {
+      setError('This email address is not verified.');
+      return;
+    }
+
+    await saveAuthToken(user);
+    await checkAndCreateProfile(user); 
+    navigate(`/profile/${user.uid}`);
+  }catch (error) {
+    console.error('Google sign in error:', error);
+    setError(error.message.includes('Failed to setup user profile') 
+      ? 'Failed to setup user profile. Please try again.'
+      : 'Failed to sign in with Google');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen relative bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
