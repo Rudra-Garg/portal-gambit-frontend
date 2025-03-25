@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
         //   // auth.signOut();
         //   // Option 2: Let them in but show a warning in the dashboard
         // }
+
         setUser(user);
       } else {
         setUser(null);

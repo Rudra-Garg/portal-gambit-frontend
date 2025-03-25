@@ -1,18 +1,79 @@
-
-import React, { useState } from 'react';
+import { useState , useContext, useEffect} from 'react';
 import GameSetup from './GameSetup';
 import Friends from './Friends';
 import MatchHistory from './MatchHistory';
+import AuthContext from "../../contexts/AuthContext";
 
 const ProfilePage = () => {
-
-  const [userProfile] = useState({
-    username: 'ChessMaster99',
-    email: 'chessmaster@example.com',
-    gamesPlayed: 127,
-    winRate: '58%',
-    memberSince: '2092-1-12'
+  const { user } = useContext(AuthContext);
+  console.log(user.stsTokenManager.accessToken);
+  console.log(user.uid);
+  const [userProfile, setUserProfile] = useState({
+    username: '',
+    email: '',
+    games_played: 0,
+    created_at: '',
+    display_name: '',
+    draws: 0,
+    losses: 0,
+    rating: 0,
+    uid: '',
+    wins: 0,
   });
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user && user.uid) {
+        try {
+          // First, get the access token
+          const tokenResponse = await fetch('http://localhost:8000/auth/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              firebase_token: user.stsTokenManager.accessToken
+            }),
+          });
+
+          if (!tokenResponse.ok) {
+            throw new Error('Failed to get access token');
+          }
+
+          const tokenData = await tokenResponse.json();
+          localStorage.setItem('access_token', tokenData.access_token);
+
+          // Then fetch the profile using GET request
+          const profileResponse = await fetch(`http://localhost:8000/profiles/${user.uid}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+          });
+
+          if (profileResponse.ok) {
+            const data = await profileResponse.json();
+            setUserProfile(data);
+          } else {
+            console.error('Failed to fetch user profile:', profileResponse.status);
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
+
+  console.log(userProfile); // Log the fetched profile
+  // const [userProfile] = useState({
+  //   username: 'ChessMaster99',
+  //   email: 'chessmaster@example.com',
+  //   gamesPlayed: 127,
+  //   winRate: '58%',
+  //   memberSince: '2092-1-12'
+  // });
 
   const [activeSection, setActiveSection] = useState('friends'); // Default to "friends"
 
@@ -31,14 +92,18 @@ const ProfilePage = () => {
               <h1 className="text-3xl font-bold text-indigo-400 tracking-wide">{userProfile.username}</h1>
               <p className="text-gray-400 text-sm">{userProfile.email}</p>
               <div className="mt-4 space-y-1 text-gray-300">
-                <div className="text-lg"><span className="font-semibold text-indigo-400">Games Played:</span> {userProfile.gamesPlayed}</div>
-                <div className="text-lg"><span className="font-semibold text-indigo-400">Win Rate:</span> {userProfile.winRate}</div>
-                <div className="text-lg"><span className="font-semibold text-indigo-400">Member Since:</span> {new Date(userProfile.memberSince).toLocaleDateString()}</div>
+                <div className="text-lg"><span className="font-semibold text-indigo-400">Games Played:</span> {userProfile.games_played}</div>
+                <div className="text-lg">
+                  <span className="font-semibold text-indigo-400">Win Rate:</span>{' '}
+                  {userProfile.games_played > 0
+                    ? `${((userProfile.wins / userProfile.games_played) * 100).toFixed(1)}%`
+                    : 'NA'}
+                </div>
+                <div className="text-lg"><span className="font-semibold text-indigo-400">Member Since:</span> {new Date(userProfile.created_at).toLocaleDateString()}</div>
               </div>
             </div>
           </div>
         </div>
-
 
         {/* Toggle Buttons for Friends & Match History */}
         <div>
@@ -80,6 +145,4 @@ const ProfilePage = () => {
   );
 };
 
-
 export default ProfilePage;
-
