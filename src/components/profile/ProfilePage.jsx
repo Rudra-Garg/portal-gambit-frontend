@@ -1,8 +1,8 @@
-import React, { useContext, useEffect, useState } from 'react';
+import { useState , useContext, useEffect} from 'react';
 import GameSetup from './GameSetup';
 import Friends from './Friends';
 import MatchHistory from './MatchHistory';
-import AuthContext from "../../contexts/AuthContext.jsx";
+import AuthContext from "../../contexts/AuthContext";
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
@@ -105,7 +105,6 @@ const ProfilePage = () => {
           </div>
         </div>
 
-
         {/* Toggle Buttons for Friends & Match History */}
         <div>
           <div className="flex space-x-4">
@@ -146,6 +145,4 @@ const ProfilePage = () => {
   );
 };
 
-
 export default ProfilePage;
-

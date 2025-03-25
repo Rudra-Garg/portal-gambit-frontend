@@ -18,16 +18,9 @@ export const AuthProvider = ({ children }) => {
         //   // auth.signOut();
         //   // Option 2: Let them in but show a warning in the dashboard
         // }
-        user.getIdToken().then((token) => {
-          localStorage.setItem('access_token', token);
-          localStorage.setItem('userId', user.uid);
-          localStorage.setItem('userEmail', user.email);
-        });
+
         setUser(user);
       } else {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('userEmail');
         setUser(null);
       }
       setLoading(false);
