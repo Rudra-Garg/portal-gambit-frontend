@@ -97,7 +97,7 @@ const areBothPlayersJoined = useCallback(() => {
         }
 
         setActiveGame(null);
-        navigate("/profile/:userId");
+        navigate("/profile:userId");
         // setShowAvailableGames(false);
       } catch (error) {
         console.error('Error exiting game:', error);
@@ -157,6 +157,36 @@ const areBothPlayersJoined = useCallback(() => {
                      gameState.black_player === user.uid ? 'black' : null;
       return myColor === gameState.current_turn;
     }, [gameState, user, areBothPlayersJoined]);
+
+
+    const syncGameTime = useCallback(() => {
+      if (!gameState || !gameId || gameState.status !== 'active') return;
+    
+      const now = Date.now();
+      const lastMoveTime = gameState.lastMoveTime || now;
+      const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
+    
+      const currentPlayerTime = gameState.current_turn === 'white' 
+        ? gameState.whiteTime 
+        : gameState.blackTime;
+    
+      const newTime = Math.max(0, currentPlayerTime - elapsedSeconds);
+    
+      update(ref(database, `games/${gameId}`), {
+        [`${gameState.current_turn}Time`]: newTime,
+        lastMoveTime: now
+      });
+    }, [gameState, gameId]);
+    
+    // Add useEffect to sync time periodically
+    useEffect(() => {
+      if (!gameState || !gameId) return;
+    
+      const syncInterval = setInterval(syncGameTime, 5000); // Sync every 5 seconds
+    
+      return () => clearInterval(syncInterval);
+    }, [gameState, gameId, syncGameTime]);
+
 
   const makeMove = useCallback((sourceSquare, targetSquare) => {
     if (!areBothPlayersJoined()) {
@@ -223,14 +253,19 @@ const areBothPlayersJoined = useCallback(() => {
         };
   
         const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
-        update(ref(database, `games/${gameId}`), {
+        const currentTime = Date.now();
+        const updates = {
           fen: newGame.fen(),
           portals: newGame.portals,
           current_turn: newTurn,
-          lastMoveTime: Date.now(),
-          lastMove: cleanMove
-        });
-  
+          lastMoveTime: currentTime,
+          lastMove: cleanMove,
+          whiteTime: gameState.current_turn === 'white' ? whiteTime : gameState.whiteTime,
+          blackTime: gameState.current_turn === 'black' ? blackTime : gameState.blackTime
+        };
+
+        update(ref(database, `games/${gameId}`), updates);
+          
         setGame(newGame);
         updateLostPieces(newGame);
   
@@ -300,66 +335,73 @@ const areBothPlayersJoined = useCallback(() => {
 useEffect(() => {
   if (!gameState || !gameId) return;
 
-  // Initialize timers from gameState
-  if (!whiteTime && !blackTime) {
-    setWhiteTime(gameState.whiteTime);
-    setBlackTime(gameState.blackTime);
-  }
-  setIsTimerRunning(gameState.status === 'active');
+  // Update local time state when Firebase data changes
+  setWhiteTime(gameState.whiteTime);
+  setBlackTime(gameState.blackTime);
 
-  const timerInterval = setInterval(() => {
-    if (isTimerRunning && gameState.status === 'active') {
-      const currentPlayer = gameState.current_turn;
-      if (currentPlayer === 'white') {
-        setWhiteTime(prevTime => {
-          if (prevTime <= 0) {
-            // White loses on time
-            update(ref(database, `games/${gameId}`), {
-              status: 'finished',
-              winner: 'black',
-              reason: 'timeout'
-            });
-            setIsTimerRunning(false);
-            setTimeoutWinner('black');
-            setShowTimeoutPopup(true);
-            return 0;
-          }
-          const newTime = prevTime - 1;
-          update(ref(database, `games/${gameId}`), {
-            whiteTime: newTime
-          });
-          return newTime;
+  let timerInterval;
+  
+  if (gameState.status === 'active' && areBothPlayersJoined()) {
+    timerInterval = setInterval(() => {
+      const now = Date.now();
+      const lastMoveTime = gameState.lastMoveTime || now;
+      const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
+
+      if (gameState.current_turn === 'white') {
+        const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
+        setWhiteTime(newWhiteTime);
+        
+        // Update Firebase every second
+        update(ref(database, `games/${gameId}`), {
+          whiteTime: newWhiteTime,
+          lastMoveTime: now
         });
+
+        if (newWhiteTime <= 0) {
+          update(ref(database, `games/${gameId}`), {
+            status: 'finished',
+            winner: 'black',
+            reason: 'timeout'
+          });
+          setTimeoutWinner('black');
+          setShowTimeoutPopup(true);
+        }
       } else {
-        setBlackTime(prevTime => {
-          if (prevTime <= 0) {
-            // Black loses on time
-            update(ref(database, `games/${gameId}`), {
-              status: 'finished',
-              winner: 'white',
-              reason: 'timeout'
-            });
-            setIsTimerRunning(false);
-            setTimeoutWinner('white');
-            setShowTimeoutPopup(true);
-            return 0;
-          }
-          const newTime = prevTime - 1;
-          update(ref(database, `games/${gameId}`), {
-            blackTime: newTime
-          });
-          return newTime;
+        const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
+        setBlackTime(newBlackTime);
+        
+        // Update Firebase every second
+        update(ref(database, `games/${gameId}`), {
+          blackTime: newBlackTime,
+          lastMoveTime: now
         });
-      }
-    }
-  }, 1000);
 
-  return () => clearInterval(timerInterval);
-}, [gameState?.current_turn, isTimerRunning, gameId, gameState?.status]);
+        if (newBlackTime <= 0) {
+          update(ref(database, `games/${gameId}`), {
+            status: 'finished',
+            winner: 'white',
+            reason: 'timeout'
+          });
+          setTimeoutWinner('white');
+          setShowTimeoutPopup(true);
+        }
+      }
+    }, 1000);
+  }
+
+  return () => {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+    }
+  };
+}, [gameState, gameId, areBothPlayersJoined]);
 
 const handleRematch = async () => {
   try {
     // Reset game state with same players but new time
+    const initialTime = gameState.time_control * 60;
+    const currentTime = Date.now();
+    
     const newGameState = {
       white_player: gameState.white_player,
       white_player_name: gameState.white_player_name,
@@ -369,13 +411,12 @@ const handleRematch = async () => {
       black_player_email: gameState.black_player_email,
       status: 'active',
       current_turn: 'white',
-      time_control: gameState.time_control,
-      whiteTime: gameState.time_control * 60,
-      blackTime: gameState.time_control * 60,
+      whiteTime: initialTime,
+      blackTime: initialTime,
+      lastMoveTime: currentTime,
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       portals: {},
       lastMove: null,
-      lastMoveTime: Date.now(),
       portal_count: gameState.portal_count,
       chat: {},
       lostPieces: {
@@ -386,8 +427,8 @@ const handleRematch = async () => {
     
     await update(ref(database, `games/${gameId}`), newGameState);
     setShowTimeoutPopup(false);
-    setWhiteTime(newGameState.whiteTime);
-    setBlackTime(newGameState.blackTime);
+    setWhiteTime(initialTime);
+    setBlackTime(initialTime);
     setIsTimerRunning(true);
     setTimeoutWinner(null);
   } catch (error) {
