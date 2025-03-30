@@ -29,23 +29,6 @@ const slideUp = {
     }
 };
 
-const slideInLeft = {
-    hidden: { opacity: 0, x: -100 },
-    visible: { 
-        opacity: 1, 
-        x: 0,
-        transition: { duration: 0.7, ease: "easeOut", delay: 0.2 }
-    }
-};
-
-const slideInRight = {
-    hidden: { opacity: 0, x: 100 },
-    visible: { 
-        opacity: 1, 
-        x: 0,
-        transition: { duration: 0.7, ease: "easeOut", delay: 0.3 }
-    }
-};
 
 const scaleButton = {
     hover: { 
@@ -84,8 +67,6 @@ const LandingPage = () => {
     const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
     const [scrollY, setScrollY] = useState(0);
     const navigate = useNavigate();
-    
- 
     const handleLoginClick = () => {
         const userId = localStorage.getItem('userId');
         const isEmailVerified = localStorage.getItem('emailVerified') === 'true';
@@ -273,7 +254,7 @@ const LandingPage = () => {
                     className="container mx-auto px-4 md:px-6 relative z-10 mt-16">
                     <motion.div className="flex flex-col md:flex-row items-center max-w-6xl mx-auto">
                         <motion.div
-                            variants={slideInLeft}
+                           
                             className="md:w-1/2 text-left mb-10 md:mb-0 md:pr-10">
                             <motion.div 
                                 className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/30 text-xs font-medium text-blue-100 mb-6"
@@ -327,7 +308,7 @@ const LandingPage = () => {
                         </motion.div>
 
                         <motion.div
-                            variants={slideInRight}
+                            
                             className="md:w-1/2 relative">
                             {/* 3D Chess board representation */}
                             <motion.div className="aspect-square max-w-md mx-auto relative perspective-800">
@@ -405,7 +386,17 @@ const LandingPage = () => {
                                     </motion.div>
                                 </motion.div>
                                 
-                               
+    {/* Portals with glow effects */}
+                                <motion.div 
+                                    className="absolute -top-5 -right-5 z-20"
+                                    variants={portalPulse} 
+                                    animate="pulse"
+                                >
+                                    <div className="relative">
+                                        <div className="absolute inset-0 rounded-full bg-blue-500 blur-xl opacity-40 scale-150" />
+                                        <GiPortal size={80} className="text-blue-400 filter drop-shadow-lg brightness-125" />
+                                    </div>
+                                </motion.div>                               
                                 <motion.div 
                                     className="absolute -bottom-5 -left-5 z-20"
                                     variants={portalPulse} 
@@ -573,7 +564,7 @@ const LandingPage = () => {
             viewport={{ once: true, amount: 0.3 }}
         >
             <motion.div 
-                variants={slideInLeft}
+               
                 className="bg-gradient-to-b from-white/5 to-white/10 backdrop-blur-sm p-8 rounded-xl border border-white/20 hover:border-white/30 transition-all group shadow-lg"
                 whileHover={scaleButton.hover}
             >
@@ -719,7 +710,7 @@ const LandingPage = () => {
             </motion.div>
 
             <motion.div 
-                variants={slideInRight}
+               
                 className="bg-gradient-to-b from-white/5 to-white/10 backdrop-blur-sm p-8 rounded-xl border border-white/20 hover:border-white/30 transition-all shadow-lg"
                 whileHover={scaleButton.hover}
             >

@@ -1,11 +1,11 @@
 import { Chess } from 'chess.js';
 
 export class PortalChess extends Chess {
-  constructor(fen) {
+  constructor(fen, maxPortals = 3) {
     super(fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
     this.portals = {};
     this.portalMoves = 0;
-    this.maxPortals = 3;
+    this.maxPortals = maxPortals;
   }
 
   moves({ square, verbose } = {}) {
@@ -227,7 +227,7 @@ export class PortalChess extends Chess {
 
   placePair(square1, square2) {
     if (Object.keys(this.portals).length / 2 >= this.maxPortals) {
-      throw new Error('Maximum portals reached');
+      throw new Error(`Maximum portals (${this.maxPortals}) reached`);
     }
 
     this.portals[square1] = {

@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext.jsx';
 import LoginForm from './components/auth/LoginForm.jsx';
 import PrivateRoute from './components/auth/PrivateRoute.jsx';
-import Dashboard from './components/dashboard.jsx';
 import SignupForm from './components/auth/SignUpForm.jsx';
 import ProfilePage from './components/profile/ProfilePage.jsx';
 import PortalChessGame from "./components/game/PortalChessGame.jsx";
