@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import {ref, update, onValue, get, remove} from 'firebase/database';
+import { ref, update, onValue, get, remove } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { PortalChess } from './CustomChessEngine';
@@ -13,7 +13,7 @@ import { useChat } from './hooks/useChat';
 import { useVoiceChat } from './hooks/useVoiceChat';
 import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
-import {useNavigate} from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import TimeoutPopup from './components/TimeoutPopup';
 
 const PortalChessGame = () => {
@@ -24,17 +24,17 @@ const PortalChessGame = () => {
   const { user } = useAuth();
   const [gameState, setGameState] = useState(null);
   const [gameId, setGameId] = useState(null);
-  const[activeGame,setActiveGame]=useState(null);
+  const [activeGame, setActiveGame] = useState(null);
   const [whiteTime, setWhiteTime] = useState(null);
-const [blackTime, setBlackTime] = useState(null);
-const [isTimerRunning, setIsTimerRunning] = useState(false);
-const [showTimeoutPopup, setShowTimeoutPopup] = useState(false);
-const [timeoutWinner, setTimeoutWinner] = useState(null);
+  const [blackTime, setBlackTime] = useState(null);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [showTimeoutPopup, setShowTimeoutPopup] = useState(false);
+  const [timeoutWinner, setTimeoutWinner] = useState(null);
 
-// Add this function after the state declarations
-const areBothPlayersJoined = useCallback(() => {
-  return gameState?.white_player && gameState?.black_player;
-}, [gameState]);
+  // Add this function after the state declarations
+  const areBothPlayersJoined = useCallback(() => {
+    return gameState?.white_player && gameState?.black_player;
+  }, [gameState]);
 
   const navigate = useNavigate();
 
@@ -111,7 +111,7 @@ const areBothPlayersJoined = useCallback(() => {
   const moveHistory = useMoveHistory(gameId);
   const [lostPieces, updateLostPieces] = useLostPieces(game);
   const { chatMessages, newMessage, setNewMessage, sendMessage } = useChat(gameId, user);
-  
+
   const {
     voiceChatEnabled,
     isMuted,
@@ -122,216 +122,232 @@ const areBothPlayersJoined = useCallback(() => {
     toggleMute
   } = useVoiceChat(gameId, gameState, user);
 
-useEffect(() => {
-  if (!gameId) return;
+  useEffect(() => {
+    if (!gameId) return;
 
-  const gameRef = ref(database, `games/${gameId}`);
-  const unsubscribe = onValue(gameRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-      setGameState(data);
-      try {
-        // Initialize with proper portal count from game state
-        const newGame = new PortalChess(undefined, data.portal_count);
-        if (typeof data.fen === 'string') {
-          newGame.load(data.fen);
+    const gameRef = ref(database, `games/${gameId}`);
+    const unsubscribe = onValue(gameRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setGameState(data);
+        try {
+          // Initialize with proper portal count from game state
+          const newGame = new PortalChess(undefined, data.portal_count);
+          if (typeof data.fen === 'string') {
+            newGame.load(data.fen);
+          }
+
+          newGame.portals = data.portals || {};
+          newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
+
+          setGame(newGame);
+          updateLostPieces(newGame);
+
+        } catch (error) {
+          console.error('Error initializing chess game:', error);
         }
-        
-        newGame.portals = data.portals || {};
-        newGame._turn = data.current_turn === 'white' ? 'w' : 'b';
-        
+      }
+    });
+
+    return () => unsubscribe();
+  }, [gameId, updateLostPieces]);
+
+  const isMyTurn = useCallback(() => {
+    if (!gameState || !user || !areBothPlayersJoined()) return false;
+    const myColor = gameState.white_player === user.uid ? 'white' :
+      gameState.black_player === user.uid ? 'black' : null;
+    return myColor === gameState.current_turn;
+  }, [gameState, user, areBothPlayersJoined]);
+
+
+  const syncGameTime = useCallback(() => {
+    if (!gameState || !gameId || gameState.status !== 'active') return;
+
+    const now = Date.now();
+    const lastMoveTime = gameState.lastMoveTime || now;
+    const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
+
+    const currentPlayerTime = gameState.current_turn === 'white'
+      ? gameState.whiteTime
+      : gameState.blackTime;
+
+    const newTime = Math.max(0, currentPlayerTime - elapsedSeconds);
+
+    update(ref(database, `games/${gameId}`), {
+      [`${gameState.current_turn}Time`]: newTime,
+      lastMoveTime: now
+    });
+  }, [gameState, gameId]);
+
+  // Add useEffect to sync time periodically
+  useEffect(() => {
+    if (!gameState || !gameId) return;
+
+    const syncInterval = setInterval(syncGameTime, 5000); // Sync every 5 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [gameState, gameId, syncGameTime]);
+
+  const makeMove = useCallback((sourceSquare, targetSquare) => {
+    if (!areBothPlayersJoined()) {
+      console.log('Waiting for both players to join');
+      return false;
+    }
+    if (!isMyTurn()) return false;
+    if (gameState.current_turn === 'white' && whiteTime <= 0) {
+      update(ref(database, `games/${gameId}`), {
+        status: 'finished',
+        winner: 'black',
+        reason: 'timeout'
+      });
+      return false;
+    }
+    if (gameState.current_turn === 'black' && blackTime <= 0) {
+      update(ref(database, `games/${gameId}`), {
+        status: 'finished',
+        winner: 'white',
+        reason: 'timeout'
+      });
+      return false;
+    }
+    try {
+      // Pass the portal_count to the new game instance
+      const newGame = new PortalChess(game.fen(), gameState.portal_count);
+      newGame.portals = { ...game.portals };
+
+      const moves = newGame.moves({ square: sourceSquare, verbose: true });
+
+      const portalMove = moves.find(move =>
+        move.portal &&
+        move.to === targetSquare
+      );
+
+      let move;
+      if (portalMove) {
+        move = newGame.move({
+          from: sourceSquare,
+          to: targetSquare,
+          via: portalMove.via,
+          portal: true
+        });
+      } else {
+        move = newGame.move({
+          from: sourceSquare,
+          to: targetSquare,
+          promotion: 'q'
+        });
+      }
+
+      if (move) {
+        const cleanMove = {
+          ...move,
+          captured: move.captured || null,
+          promotion: move.promotion || null,
+          from: move.from,
+          to: move.to,
+          piece: move.piece,
+          color: move.color,
+          flags: move.flags || '',
+          san: move.san || '',
+          via: move.via || null,
+          portal: move.portal || false
+        };
+
+        const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
+        const currentTime = Date.now();
+        const updates = {
+          fen: newGame.fen(),
+          portals: newGame.portals,
+          current_turn: newTurn,
+          lastMoveTime: currentTime,
+          lastMove: cleanMove,
+          whiteTime: gameState.current_turn === 'white' ? whiteTime : gameState.whiteTime,
+          blackTime: gameState.current_turn === 'black' ? blackTime : gameState.blackTime
+        };
+
+        const gameStatus = newGame.isGameOver();
+        if (gameStatus.over) {
+          update(ref(database, `games/${gameId}`), {
+            ...updates,
+            status: 'finished',
+            winner: gameStatus.winner,
+            reason: gameStatus.reason
+          });
+
+          // Show appropriate end game popup
+          if (gameStatus.winner) {
+            setTimeoutWinner(gameStatus.winner);
+            setShowTimeoutPopup(true);
+          }
+        } else {
+          update(ref(database, `games/${gameId}`), updates);
+        }
+
         setGame(newGame);
         updateLostPieces(newGame);
-        
-      } catch (error) {
-        console.error('Error initializing chess game:', error);
+
+        return true;
       }
+      return false;
+    } catch (error) {
+      console.error('Error making move:', error);
+      return false;
     }
-  });
+  }, [game, gameState, gameId, isMyTurn, updateLostPieces, whiteTime, blackTime, areBothPlayersJoined]);
 
-  return () => unsubscribe();
-}, [gameId, updateLostPieces]);
-
-    const isMyTurn = useCallback(() => {
-      if (!gameState || !user || !areBothPlayersJoined()) return false;
-      const myColor = gameState.white_player === user.uid ? 'white' : 
-                     gameState.black_player === user.uid ? 'black' : null;
-      return myColor === gameState.current_turn;
-    }, [gameState, user, areBothPlayersJoined]);
-
-
-    const syncGameTime = useCallback(() => {
-      if (!gameState || !gameId || gameState.status !== 'active') return;
-    
-      const now = Date.now();
-      const lastMoveTime = gameState.lastMoveTime || now;
-      const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-    
-      const currentPlayerTime = gameState.current_turn === 'white' 
-        ? gameState.whiteTime 
-        : gameState.blackTime;
-    
-      const newTime = Math.max(0, currentPlayerTime - elapsedSeconds);
-    
-      update(ref(database, `games/${gameId}`), {
-        [`${gameState.current_turn}Time`]: newTime,
-        lastMoveTime: now
-      });
-    }, [gameState, gameId]);
-    
-    // Add useEffect to sync time periodically
-    useEffect(() => {
-      if (!gameState || !gameId) return;
-    
-      const syncInterval = setInterval(syncGameTime, 5000); // Sync every 5 seconds
-    
-      return () => clearInterval(syncInterval);
-    }, [gameState, gameId, syncGameTime]);
-
-    const makeMove = useCallback((sourceSquare, targetSquare) => {
-      if (!areBothPlayersJoined()) {
-        console.log('Waiting for both players to join');
-        return false;
-      }
-      if (!isMyTurn()) return false;
-      if (gameState.current_turn === 'white' && whiteTime <= 0) {
-        update(ref(database, `games/${gameId}`), {
-          status: 'finished',
-          winner: 'black',
-          reason: 'timeout'
-        });
-        return false;
-      }
-      if (gameState.current_turn === 'black' && blackTime <= 0) {
-        update(ref(database, `games/${gameId}`), {
-          status: 'finished',
-          winner: 'white',
-          reason: 'timeout'
-        });
-        return false;
-      }
-      try {
-        // Pass the portal_count to the new game instance
-        const newGame = new PortalChess(game.fen(), gameState.portal_count);
-        newGame.portals = { ...game.portals };
-    
-        const moves = newGame.moves({ square: sourceSquare, verbose: true });
-    
-        const portalMove = moves.find(move => 
-          move.portal && 
-          move.to === targetSquare
-        );
-    
-        let move;
-        if (portalMove) {
-          move = newGame.move({
-            from: sourceSquare,
-            to: targetSquare,
-            via: portalMove.via,
-            portal: true
-          });
-        } else {
-          move = newGame.move({
-            from: sourceSquare,
-            to: targetSquare,
-            promotion: 'q'
-          });
+  const handleSquareClick = useCallback((square) => {
+    if (!portalMode) {
+      if (!selectedSquare) {
+        const piece = game.get(square);
+        if (piece && piece.color === game.turn()) {
+          setSelectedSquare(square);
         }
-    
-        if (move) {
-          const cleanMove = {
-            ...move,
-            captured: move.captured || null,
-            promotion: move.promotion || null,
-            from: move.from,
-            to: move.to,
-            piece: move.piece,
-            color: move.color,
-            flags: move.flags || '',
-            san: move.san || '',
-            via: move.via || null,
-            portal: move.portal || false
+      } else {
+        makeMove(selectedSquare, square);
+        setSelectedSquare(null);
+      }
+    } else {
+      if (!portalStart) {
+        setPortalStart(square);
+      } else {
+        try {
+          // Pass the portal_count to the new game instance
+          const newGame = new PortalChess(game.fen(), gameState.portal_count);
+          newGame.portals = { ...game.portals };
+          newGame.placePair(portalStart, square);
+
+          setGame(newGame);
+          setPortalStart(null);
+          setPortalMode(false);
+          const portalMove = {
+            type: 'portal',
+            from: portalStart,
+            to: square,
+            piece: gameState.current_turn === 'white' ? 'P' : 'p', // P for portal
+            color: gameState.current_turn,
+            san: `Portal ${portalStart}↔${square}`,
+            portal: true
           };
-    
           const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
-          const currentTime = Date.now();
-          const updates = {
+          update(ref(database, `games/${gameId}`), {
             fen: newGame.fen(),
             portals: newGame.portals,
             current_turn: newTurn,
-            lastMoveTime: currentTime,
-            lastMove: cleanMove,
-            whiteTime: gameState.current_turn === 'white' ? whiteTime : gameState.whiteTime,
-            blackTime: gameState.current_turn === 'black' ? blackTime : gameState.blackTime
-          };
-    
-          update(ref(database, `games/${gameId}`), updates);
-            
-          setGame(newGame);
-          updateLostPieces(newGame);
-    
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.error('Error making move:', error);
-        return false;
-      }
-    }, [game, gameState, gameId, isMyTurn, updateLostPieces, whiteTime, blackTime, areBothPlayersJoined]);
-
-    const handleSquareClick = useCallback((square) => {
-      if (!portalMode) {
-        if (!selectedSquare) {
-          const piece = game.get(square);
-          if (piece && piece.color === game.turn()) {
-            setSelectedSquare(square);
-          }
-        } else {
-          makeMove(selectedSquare, square);
-          setSelectedSquare(null);
-        }
-      } else {
-        if (!portalStart) {
-          setPortalStart(square);
-        } else {
-          try {
-            // Pass the portal_count to the new game instance
-            const newGame = new PortalChess(game.fen(), gameState.portal_count);
-            newGame.portals = { ...game.portals };
-            newGame.placePair(portalStart, square);
-            
-            setGame(newGame);
-            setPortalStart(null);
-            setPortalMode(false);
-            const portalMove = {
-              type: 'portal',
-              from: portalStart,
-              to: square,
-              piece: gameState.current_turn === 'white' ? 'P' : 'p', // P for portal
-              color: gameState.current_turn,
-              san: `Portal ${portalStart}↔${square}`,
-              portal: true
-            };
-            const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
-            update(ref(database, `games/${gameId}`), {
-              fen: newGame.fen(),
-              portals: newGame.portals,
-              current_turn: newTurn,
-              lastMoveTime: Date.now(),
-              lastMove: portalMove
-            });
-          } catch (error) {
-            console.error('Portal placement error:', error);
-            alert(`Maximum number of portals (${gameState.portal_count}) reached!`);
-            setPortalStart(null);
-            setPortalMode(false);
-          }
+            lastMoveTime: Date.now(),
+            lastMove: portalMove
+          });
+        } catch (error) {
+          console.error('Portal placement error:', error);
+          alert(`Maximum number of portals (${gameState.portal_count}) reached!`);
+          setPortalStart(null);
+          setPortalMode(false);
         }
       }
-    }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
+    }
+  }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
 
   const amIWhitePlayer = gameState?.white_player === user?.uid;
-  
+
   // Get player names from gameState
   const whitePlayerName = gameState?.white_player_name || "White Player";
   const blackPlayerName = gameState?.black_player_name || "Black Player";
@@ -341,127 +357,127 @@ useEffect(() => {
   const bottomPlayerColor = amIWhitePlayer ? 'white' : 'black';
 
 
-// Add this useEffect after other useEffects
-// Replace the existing timer useEffect with this updated version
-useEffect(() => {
-  if (!gameState || !gameId) return;
+  // Add this useEffect after other useEffects
+  // Replace the existing timer useEffect with this updated version
+  useEffect(() => {
+    if (!gameState || !gameId) return;
 
-  // Update local time state when Firebase data changes
-  setWhiteTime(gameState.whiteTime);
-  setBlackTime(gameState.blackTime);
+    // Update local time state when Firebase data changes
+    setWhiteTime(gameState.whiteTime);
+    setBlackTime(gameState.blackTime);
 
-  let timerInterval;
-  
-  if (gameState.status === 'active' && areBothPlayersJoined()) {
-    timerInterval = setInterval(() => {
-      const now = Date.now();
-      const lastMoveTime = gameState.lastMoveTime || now;
-      const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
+    let timerInterval;
 
-      if (gameState.current_turn === 'white') {
-        const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
-        setWhiteTime(newWhiteTime);
-        
-        // Update Firebase every second
-        update(ref(database, `games/${gameId}`), {
-          whiteTime: newWhiteTime,
-          lastMoveTime: now
-        });
+    if (gameState.status === 'active' && areBothPlayersJoined()) {
+      timerInterval = setInterval(() => {
+        const now = Date.now();
+        const lastMoveTime = gameState.lastMoveTime || now;
+        const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
 
-        if (newWhiteTime <= 0) {
+        if (gameState.current_turn === 'white') {
+          const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
+          setWhiteTime(newWhiteTime);
+
+          // Update Firebase every second
           update(ref(database, `games/${gameId}`), {
-            status: 'finished',
-            winner: 'black',
-            reason: 'timeout'
+            whiteTime: newWhiteTime,
+            lastMoveTime: now
           });
-          setTimeoutWinner('black');
-          setShowTimeoutPopup(true);
-        }
-      } else {
-        const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
-        setBlackTime(newBlackTime);
-        
-        // Update Firebase every second
-        update(ref(database, `games/${gameId}`), {
-          blackTime: newBlackTime,
-          lastMoveTime: now
-        });
 
-        if (newBlackTime <= 0) {
+          if (newWhiteTime <= 0) {
+            update(ref(database, `games/${gameId}`), {
+              status: 'finished',
+              winner: 'black',
+              reason: 'timeout'
+            });
+            setTimeoutWinner('black');
+            setShowTimeoutPopup(true);
+          }
+        } else {
+          const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
+          setBlackTime(newBlackTime);
+
+          // Update Firebase every second
           update(ref(database, `games/${gameId}`), {
-            status: 'finished',
-            winner: 'white',
-            reason: 'timeout'
+            blackTime: newBlackTime,
+            lastMoveTime: now
           });
-          setTimeoutWinner('white');
-          setShowTimeoutPopup(true);
-        }
-      }
-    }, 1000);
-  }
 
-  return () => {
-    if (timerInterval) {
-      clearInterval(timerInterval);
+          if (newBlackTime <= 0) {
+            update(ref(database, `games/${gameId}`), {
+              status: 'finished',
+              winner: 'white',
+              reason: 'timeout'
+            });
+            setTimeoutWinner('white');
+            setShowTimeoutPopup(true);
+          }
+        }
+      }, 1000);
     }
-  };
-}, [gameState, gameId, areBothPlayersJoined]);
 
-const handleRematch = async () => {
-  try {
-    // Reset game state with same players but new time
-    const initialTime = gameState.time_control * 60;
-    const currentTime = Date.now();
-    
-    const newGameState = {
-      white_player: gameState.white_player,
-      white_player_name: gameState.white_player_name,
-      white_player_email: gameState.white_player_email,
-      black_player: gameState.black_player,
-      black_player_name: gameState.black_player_name,
-      black_player_email: gameState.black_player_email,
-      status: 'active',
-      current_turn: 'white',
-      whiteTime: initialTime,
-      blackTime: initialTime,
-      lastMoveTime: currentTime,
-      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-      portals: {},
-      lastMove: null,
-      portal_count: gameState.portal_count,
-      chat: {},
-      lostPieces: {
-        white: [],
-        black: []
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval);
       }
     };
-    
-    await update(ref(database, `games/${gameId}`), newGameState);
-    setShowTimeoutPopup(false);
-    setWhiteTime(initialTime);
-    setBlackTime(initialTime);
-    setIsTimerRunning(true);
-    setTimeoutWinner(null);
-  } catch (error) {
-    console.error('Error starting rematch:', error);
-  }
-};
+  }, [gameState, gameId, areBothPlayersJoined]);
 
-// Add this helper function to format time display
+  const handleRematch = async () => {
+    try {
+      // Reset game state with same players but new time
+      const initialTime = gameState.time_control * 60;
+      const currentTime = Date.now();
+
+      const newGameState = {
+        white_player: gameState.white_player,
+        white_player_name: gameState.white_player_name,
+        white_player_email: gameState.white_player_email,
+        black_player: gameState.black_player,
+        black_player_name: gameState.black_player_name,
+        black_player_email: gameState.black_player_email,
+        status: 'active',
+        current_turn: 'white',
+        whiteTime: initialTime,
+        blackTime: initialTime,
+        lastMoveTime: currentTime,
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        portals: {},
+        lastMove: null,
+        portal_count: gameState.portal_count,
+        chat: {},
+        lostPieces: {
+          white: [],
+          black: []
+        }
+      };
+
+      await update(ref(database, `games/${gameId}`), newGameState);
+      setShowTimeoutPopup(false);
+      setWhiteTime(initialTime);
+      setBlackTime(initialTime);
+      setIsTimerRunning(true);
+      setTimeoutWinner(null);
+    } catch (error) {
+      console.error('Error starting rematch:', error);
+    }
+  };
+
+  // Add this helper function to format time display
   return (
     <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
       <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden">
-      <PlayerInfo 
-  isTopPlayer={true}
-  playerNumber={2}
-  playerName={amIWhitePlayer ? blackPlayerName : whitePlayerName}
-  isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
-  lostPieces={lostPieces}
-  playerColor={topPlayerColor}
-  timeRemaining={amIWhitePlayer ? blackTime : whiteTime}
-/>
-        
-        <ChessboardWrapper 
+        <PlayerInfo
+          isTopPlayer={true}
+          playerNumber={2}
+          playerName={amIWhitePlayer ? blackPlayerName : whitePlayerName}
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'black' : 'white')}
+          lostPieces={lostPieces}
+          playerColor={topPlayerColor}
+          timeRemaining={amIWhitePlayer ? blackTime : whiteTime}
+        />
+
+        <ChessboardWrapper
           game={game}
           makeMove={makeMove}
           handleSquareClick={handleSquareClick}
@@ -472,28 +488,28 @@ const handleRematch = async () => {
           portalStart={portalStart}
           selectedSquare={selectedSquare}
         />
-        
-        <PlayerInfo 
-  isTopPlayer={false}
-  playerNumber={1}
-  playerName={amIWhitePlayer ? whitePlayerName : blackPlayerName}
-  isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
-  lostPieces={lostPieces}
-  playerColor={bottomPlayerColor}
-  timeRemaining={amIWhitePlayer ? whiteTime : blackTime}
-/>
+
+        <PlayerInfo
+          isTopPlayer={false}
+          playerNumber={1}
+          playerName={amIWhitePlayer ? whitePlayerName : blackPlayerName}
+          isMyTurn={gameState?.current_turn === (amIWhitePlayer ? 'white' : 'black')}
+          lostPieces={lostPieces}
+          playerColor={bottomPlayerColor}
+          timeRemaining={amIWhitePlayer ? whiteTime : blackTime}
+        />
       </div>
 
       <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full">
-        <GameHistory 
+        <GameHistory
           moveHistory={moveHistory}
           portalMode={portalMode}
           setPortalMode={setPortalMode}
           isMyTurn={isMyTurn}
           exit={exitGame}
         />
-        
-        <ChatComponent 
+
+        <ChatComponent
           chatMessages={chatMessages}
           newMessage={newMessage}
           setNewMessage={setNewMessage}
@@ -509,13 +525,13 @@ const handleRematch = async () => {
         />
       </div>
       {showTimeoutPopup && (
-      <TimeoutPopup
-        winner={timeoutWinner}
-        onClose={() => setShowTimeoutPopup(false)}
-        onRematch={handleRematch}
-        onExit={exitGame}
-      />
-    )}
+        <TimeoutPopup
+          winner={timeoutWinner}
+          onClose={() => setShowTimeoutPopup(false)}
+          onRematch={handleRematch}
+          onExit={exitGame}
+        />
+      )}
     </div>
   );
 };

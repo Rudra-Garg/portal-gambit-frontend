@@ -15,6 +15,7 @@ const CustomChessBoard = ({ gameId, onMove, currentTurn, isMyTurn, gameState }) 
   const [check, setCheck] = useState({ white: false, black: false });
 
   useEffect(() => {
+    console.log("ue1");
     if (gameState?.board) {
       // Ensure the board is properly structured
       const newBoard = Array(8).fill(null).map((_, i) => 
@@ -25,6 +26,7 @@ const CustomChessBoard = ({ gameId, onMove, currentTurn, isMyTurn, gameState }) 
   }, [gameState]);
 
   useEffect(() => {
+    console.log("ue2");
     if (board && Array.isArray(board)) {
       try {
         setCheck({
@@ -39,6 +41,7 @@ const CustomChessBoard = ({ gameId, onMove, currentTurn, isMyTurn, gameState }) 
   }, [board]);
 
   useEffect(() => {
+    console.log("ue3");
     console.log('Current board state:', board);
   }, [board]);
 
