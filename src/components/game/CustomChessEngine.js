@@ -9,25 +9,20 @@ export class PortalChess extends Chess {
   }
 
   moves({ square, verbose, visited } = {}) {
-    // Initialize visited object if not passed in.
-    // visited.portals keeps track of portal squares already used in this chain.
-    // visited.blocks keeps track of destination squares reached via portals.
-    console.log('chk1', visited);
+    // Enhanced visited state
     if (!visited) {
-      visited = { portals: new Set(), blocks: new Set() };
+      visited = {
+        portals: new Set(),        // currently used portals
+        portalChain: [],          // sequence of portals used
+        blocks: new Set(),         // blocked squares
+        moves: new Map()          // accumulate moves across chain
+      };
     }
 
-    console.log('Calculating moves for square:', square);
-    console.log('Current portals:', this.portals);
-
     let standardMoves = super.moves({ square, verbose });
-    console.log('Initial standard moves:', standardMoves);
-    standardMoves.forEach(move => console.log(typeof move === 'object' ? JSON.stringify(move, null, 2) : move));
-
     const portalMoves = [];
     const piece = this.get(square);
-    console.log("reached portal check")
-    console.log("piece: ", piece, square)
+
     if (!piece) return standardMoves;
 
     const isSquareInPiecePath = (from, to, checkSquare, pieceType) => {
@@ -37,7 +32,6 @@ export class PortalChess extends Chess {
       const toRank = parseInt(to[1]) - 1;
       const checkFile = checkSquare.charCodeAt(0) - 97;
       const checkRank = parseInt(checkSquare[1]) - 1;
-      console.log("checking now for postn: ", from, to, checkSquare, pieceType)
       switch (pieceType) {
         case 'r': // Rook
           if (fromFile === toFile) {
@@ -85,106 +79,85 @@ export class PortalChess extends Chess {
       }
     };
 
-    // Find standard moves that are blocked by portals
     const blockedMoves = standardMoves.filter(move => {
       const from = typeof move === 'string' ? move.slice(0, 2) : move.from;
       const to = typeof move === 'string' ? move.slice(2, 4) : move.to;
-
       return Object.keys(this.portals).some(portalSquare =>
         isSquareInPiecePath(from, to, portalSquare, piece.type)
       );
     });
 
-    console.log('Moves blocked by portals:', blockedMoves);
+    const unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
 
-    // Process portal moves – but first, check if this portal has already been used in this chain.
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
-      if (visited.portals.has(portalSquare)) {
-        // Already processed this portal in the current chain, skip to avoid recursion loop.
-        return;
-      }
+      if (visited.portals.has(portalSquare)) return;
 
-      // Only allow specific pieces to use portals
       const allowedPieces = ['r', 'b', 'q', 'p'];
-      if (!allowedPieces.includes(piece.type)) {
-        return;
-      }
+      if (!allowedPieces.includes(piece.type)) return;
 
-      // Special handling for pawns
       if (piece.type === 'p') {
-        // Only allow portal moves for pawns on their starting rank
         const startRank = piece.color === 'w' ? '2' : '7';
-        if (square[1] !== startRank) {
-          return;
-        }
+        if (square[1] !== startRank) return;
       }
 
-      // Mark this portal as visited in the current move chain.
       visited.portals.add(portalSquare);
+      visited.portalChain.push(portalSquare);
 
-      // Check if the piece can move to the portal entrance
-      const movesToPortal = super.moves({ square, verbose: true })
-        .filter(move => move.to === portalSquare);
+      const movesToPortal = unblockedMoves.filter(move =>
+        (typeof move === 'string' ? move.slice(2, 4) : move.to) === portalSquare
+      );
 
       if (movesToPortal.length > 0) {
         const portalExit = portal.linkedTo;
-
-        // Calculate direction of movement to portal
         const moveToPortal = movesToPortal[0];
+
         const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
         const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
-        console.log("moveToPortal: ", moveToPortal)
-        console.log("dx, dy: ", dx, dy)
-        // Temporarily move piece to portal exit
+
         const originalPiece = this.remove(square);
         this.put(originalPiece, portalExit);
 
-        // Get all possible moves from the exit point.
-        // Pass the current visited object to prevent re-traversing the same portal chain.
-        const exitMoves = this.moves({ square: portalExit, verbose: true, visited });
+        const exitMoves = this.moves({
+          square: portalExit,
+          verbose: true,
+          visited
+        });
 
-        // Filter moves based on piece type and direction
         exitMoves.forEach(move => {
-          // Avoid reusing a block square already reached in this chain.
           if (visited.blocks.has(move.to)) return;
 
           const exitDx = Math.sign(move.to.charCodeAt(0) - portalExit.charCodeAt(0));
           const exitDy = Math.sign(parseInt(move.to[1]) - parseInt(portalExit[1]));
-          console.log("exitDx, exitDy: ", exitDx, exitDy)
-          console.log("piece.type: ", piece.type)
 
           let isValidDirection = false;
-
           switch (piece.type) {
-            case 'r': // Rook: same horizontal or vertical direction
+            case 'r':
               isValidDirection = (exitDx === dx && exitDy === 0) || (exitDx === 0 && exitDy === dy);
               break;
-            case 'b': // Bishop: same diagonal direction
+            case 'b':
               isValidDirection = exitDx === dx && exitDy === dy;
               break;
-            case 'q': // Queen: combines rook and bishop rules
+            case 'q':
               isValidDirection = exitDx === dx && exitDy === dy;
               break;
-            case 'p': // Pawn: only straight ahead and double move
-              isValidDirection = exitDx === 0 &&
-                exitDy === (piece.color === 'w' ? 1 : -1);
+            case 'p':
+              isValidDirection = exitDx === 0 && exitDy === (piece.color === 'w' ? 1 : -1);
               break;
           }
 
           if (isValidDirection) {
             const targetPiece = this.get(move.to);
             if (!targetPiece || targetPiece.color !== piece.color) {
-              // Mark the destination block as visited.
               visited.blocks.add(move.to);
               portalMoves.push({
                 color: piece.color,
                 from: square,
                 to: move.to,
                 piece: piece.type,
-                via: portalSquare,
+                via: [...visited.portalChain].join('->'),
                 portal: true,
                 flags: 'p',
-                san: `P${portalSquare}-${move.to}`,
+                san: `P${[...visited.portalChain].join('->')}-${move.to}`,
                 captured: targetPiece ? targetPiece.type : undefined,
                 lan: `${square}${move.to}`,
                 after: this.fen(),
@@ -194,19 +167,17 @@ export class PortalChess extends Chess {
           }
         });
 
-        // Restore piece to original position
         this.remove(portalExit);
         this.put(originalPiece, square);
       }
+
+      visited.portals.delete(portalSquare);
+      visited.portalChain.pop();
     });
 
-    console.log('Portal moves:', portalMoves);
-    const allMoves = [...standardMoves, ...portalMoves];
-    console.log('All available moves:', allMoves);
-
+    const allMoves = [...unblockedMoves, ...portalMoves];
     return verbose ? allMoves : allMoves.map(m => m.san);
   }
-
 
   move(moveObj) {
     console.log("trying to move: ", moveObj)
@@ -214,7 +185,6 @@ export class PortalChess extends Chess {
       const piece = this.get(moveObj.from);
       if (!piece) return null;
 
-      // Validate the move is legal
       const moves = this.moves({ square: moveObj.from, verbose: true });
       const isValid = moves.some(move =>
         move.portal &&
@@ -224,13 +194,8 @@ export class PortalChess extends Chess {
 
       if (!isValid) return null;
 
-      // Remove piece from start
       this.remove(moveObj.from);
-
-      // Place piece at final destination
       this.put(piece, moveObj.to);
-
-      // Update turn
       this._turn = this._turn === 'w' ? 'b' : 'w';
 
       return {
