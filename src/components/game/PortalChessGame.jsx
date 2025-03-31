@@ -303,13 +303,22 @@ useEffect(() => {
             setGame(newGame);
             setPortalStart(null);
             setPortalMode(false);
-    
+            const portalMove = {
+              type: 'portal',
+              from: portalStart,
+              to: square,
+              piece: gameState.current_turn === 'white' ? 'P' : 'p', // P for portal
+              color: gameState.current_turn,
+              san: `Portal ${portalStart}↔${square}`,
+              portal: true
+            };
             const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
             update(ref(database, `games/${gameId}`), {
               fen: newGame.fen(),
               portals: newGame.portals,
               current_turn: newTurn,
-              lastMoveTime: Date.now()
+              lastMoveTime: Date.now(),
+              lastMove: portalMove
             });
           } catch (error) {
             console.error('Portal placement error:', error);
