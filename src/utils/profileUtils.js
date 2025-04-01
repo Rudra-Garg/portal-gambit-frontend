@@ -1,3 +1,5 @@
+import {BACKEND_URL} from "../config.js";
+
 const fetchProfileDetails = async (uid) => {
     try {
         const accessToken = localStorage.getItem('access_token');
@@ -5,7 +7,7 @@ const fetchProfileDetails = async (uid) => {
             throw new Error('No access token found');
         }
 
-        const response = await fetch(`http://localhost:8000/profiles/${uid}`, {
+        const response = await fetch(`${BACKEND_URL}/profiles/${uid}`, {
             method: 'GET',
             headers: {
                 'accept': 'application/json',

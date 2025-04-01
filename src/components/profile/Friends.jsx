@@ -2,6 +2,7 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 // Make sure this import matches your actual context path
 import AuthContext from "../../contexts/AuthContext";
 import { fetchProfileDetails } from "../../utils/profileUtils";
+import { BACKEND_URL } from "../../config.js";
 
 const Friends = () => {
   // Existing state and context
@@ -75,7 +76,7 @@ const Friends = () => {
           throw new Error('No access token found');
         }
 
-        const response = await fetch(`http://localhost:8000/profiles/search/${friendRequest}?limit=10`, {
+        const response = await fetch(`${BACKEND_URL}/profiles/search/${friendRequest}?limit=10`, {
           method: 'GET',
           headers: {
             'accept': 'application/json',
@@ -124,7 +125,7 @@ const Friends = () => {
         throw new Error('No access token found');
       }
 
-      const response = await fetch('http://localhost:8000/friends/requests', {
+      const response = await fetch(`${BACKEND_URL}/friends/requests`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -170,7 +171,8 @@ const Friends = () => {
           throw new Error('No access token found');
         }
 
-        const response = await fetch('http://localhost:8000/friends/list', {
+        console.log("friend access token", accessToken);
+        const response = await fetch(`${BACKEND_URL}/friends/list`, {
           method: 'GET',
           headers: {
             'accept': 'application/json',
@@ -238,7 +240,7 @@ const Friends = () => {
           throw new Error('No access token found');
         }
 
-        const response = await fetch('http://localhost:8000/friends/requests/pending', {
+        const response = await fetch(`${BACKEND_URL}/friends/requests/pending`, {
           method: 'GET',
           headers: {
             'accept': 'application/json',
@@ -304,7 +306,7 @@ const Friends = () => {
       }
 
       // Make the DELETE request to remove the friend
-      const response = await fetch(`http://localhost:8000/friends/${friendId}`, {
+      const response = await fetch(`${BACKEND_URL}/friends/${friendId}`, {
         method: 'DELETE',
         headers: {
           'accept': 'application/json',
@@ -345,7 +347,7 @@ const Friends = () => {
         throw new Error('No access token found');
       }
 
-      const response = await fetch(`http://localhost:8000/friends/requests/${requestId}/respond`, {
+      const response = await fetch(`${BACKEND_URL}/friends/requests/${requestId}/respond`, {
         method: 'POST',
         headers: {
           'accept': 'application/json',

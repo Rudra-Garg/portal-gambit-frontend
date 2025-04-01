@@ -2,7 +2,8 @@ import { useState , useContext, useEffect} from 'react';
 import GameSetup from './GameSetup';
 import Friends from './Friends';
 import MatchHistory from './MatchHistory';
-import AuthContext from "../../contexts/AuthContext";
+import AuthContext from "../../contexts/AuthContext.jsx";
+import {BACKEND_URL} from "../../config.js";
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
@@ -26,7 +27,7 @@ const ProfilePage = () => {
       if (user && user.uid) {
         try {
           // First, get the access token
-          const tokenResponse = await fetch('http://localhost:8000/auth/token', {
+          const tokenResponse = await fetch(`${BACKEND_URL}/auth/token`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -44,7 +45,7 @@ const ProfilePage = () => {
           localStorage.setItem('access_token', tokenData.access_token);
 
           // Then fetch the profile using GET request
-          const profileResponse = await fetch(`http://localhost:8000/profiles/${user.uid}`, {
+          const profileResponse = await fetch(`${BACKEND_URL}/profiles/${user.uid}`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('access_token')}`
