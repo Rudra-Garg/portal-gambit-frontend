@@ -214,6 +214,16 @@ export class PortalChess extends Chess {
   }
 
   placePair(square1, square2) {
+    // Verify that neither square is occupied
+    if (this.get(square1) || this.get(square2)) {
+      throw new Error("Cannot place portal on an occupied square");
+    }
+
+    // Check if either square already has a portal
+    if (this.portals[square1] || this.portals[square2]) {
+      throw new Error("Cannot place portal on a square that already has a portal");
+    }
+
     const portalCount = Object.keys(this.portals).length / 2;
 
     if (portalCount >= this.maxPortals) {
