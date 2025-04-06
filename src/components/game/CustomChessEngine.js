@@ -6,9 +6,11 @@ export class PortalChess extends Chess {
     this.portals = {};
     this.portalMoves = 0;
     this.maxPortals = maxPortals;
+    this.color_hashes = ['#FF5733', '#33A1FF', '#28A745', '#FFC107', '#8E44AD'];
   }
 
   moves({ square, verbose, visited } = {}) {
+    console.log("portal list:", this.portals);
     // Enhanced visited state
     if (!visited) {
       visited = {
@@ -212,17 +214,54 @@ export class PortalChess extends Chess {
   }
 
   placePair(square1, square2) {
-    if (Object.keys(this.portals).length / 2 >= this.maxPortals) {
-      throw new Error(`Maximum portals (${this.maxPortals}) reached`);
+    const portalCount = Object.keys(this.portals).length / 2;
+
+    if (portalCount >= this.maxPortals) {
+      // Find lowest portal_id to remove
+      let lowestId = Infinity;
+      let portalSquaresToRemove = [];
+
+      Object.entries(this.portals).forEach(([square, portal]) => {
+        if (portal.portal_id < lowestId) {
+          lowestId = portal.portal_id;
+          portalSquaresToRemove = [];
+        }
+        if (portal.portal_id === lowestId) {
+          portalSquaresToRemove.push(square);
+        }
+      });
+
+      // Remove portal pair with lowest id
+      portalSquaresToRemove.forEach(square => {
+        delete this.portals[square];
+      });
     }
 
+    // Find highest existing portal ID
+    let highestId = -1;
+    Object.values(this.portals).forEach(portal => {
+      if (portal.portal_id > highestId) {
+        highestId = portal.portal_id;
+      }
+    });
+
+    // New portal ID is highest + 1 (or 0 if no portals exist)
+    const newPortalId = highestId + 1;
+    const colorHash = this.color_hashes[newPortalId % this.color_hashes.length];
+
+    // Create the portal pair with new attributes
     this.portals[square1] = {
       linkedTo: square2,
-      player: this.turn()
+      player: this.turn(),
+      portal_id: newPortalId,
+      color_hash: colorHash
     };
+
     this.portals[square2] = {
       linkedTo: square1,
-      player: this.turn()
+      player: this.turn(),
+      portal_id: newPortalId,
+      color_hash: colorHash
     };
   }
 
