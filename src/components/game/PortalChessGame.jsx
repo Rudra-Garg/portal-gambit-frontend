@@ -431,7 +431,7 @@ const PortalChessGame = () => {
         const now = Date.now();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-  
+        console.log(lastMoveTime, now, elapsedSeconds);
         if (gameState.current_turn === 'white') {
           // ONLY update the UI, not the database
           const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
