@@ -2,13 +2,13 @@ import PropTypes from 'prop-types';
 import { Chessboard } from 'react-chessboard';
 import { useEffect, useState } from 'react';
 
-const ChessboardWrapper = ({ 
-  game, 
-  makeMove, 
-  handleSquareClick, 
-  gameState, 
-  user, 
-  isMyTurn, 
+const ChessboardWrapper = ({
+  game,
+  makeMove,
+  handleSquareClick,
+  gameState,
+  user,
+  isMyTurn,
   portalStart,
   selectedSquare
 }) => {
@@ -30,10 +30,10 @@ const ChessboardWrapper = ({
   }, []);
 
   const customSquareStyles = {
-    ...Object.keys(game.portals).reduce((acc, square) => ({
+    ...Object.entries(game.portals).reduce((acc, [square, portal]) => ({
       ...acc,
       [square]: {
-        background: 'radial-gradient(circle, #2196f3 0%, transparent 70%)',
+        background: `radial-gradient(circle, ${portal.color_hash || '#2196f3'} 0%, transparent 70%)`,
         borderRadius: '50%'
       }
     }), {}),
@@ -48,13 +48,22 @@ const ChessboardWrapper = ({
         backgroundColor: 'rgba(255, 255, 0, 0.5)'
       },
       ...game.moves({ square: selectedSquare, verbose: true }).reduce((acc, move) => {
+        // Determine portal color for this move if it's a portal move
+        let portalColor = 'rgba(33, 150, 243, 0.4)'; // Default blue
+        if (move.portal && move.via) {
+          const firstPortalSquare = move.via.split('->')[0];
+          if (game.portals[firstPortalSquare]?.color_hash) {
+            portalColor = game.portals[firstPortalSquare].color_hash;
+          }
+        }
+
         return {
           ...acc,
           [move.to]: {
-            background: move.portal 
+            background: move.portal
               ? move.captured
-                ? 'radial-gradient(circle, transparent 35%, rgba(33, 150, 243, 0.4) 36%, rgba(33, 150, 243, 0.4) 45%, transparent 46%)'
-                : 'radial-gradient(circle, rgba(33, 150, 243, 0.4) 0%, rgba(33, 150, 243, 0.4) 30%, transparent 31%)'
+                ? `radial-gradient(circle, transparent 35%, ${portalColor} 36%, ${portalColor} 45%, transparent 46%)`
+                : `radial-gradient(circle, ${portalColor} 0%, ${portalColor} 30%, transparent 31%)`
               : move.captured
                 ? 'radial-gradient(circle, transparent 35%, rgba(0, 255, 0, 0.4) 36%, rgba(0, 255, 0, 0.4) 45%, transparent 46%)'
                 : 'radial-gradient(circle, rgba(0, 255, 0, 0.4) 0%, rgba(0, 255, 0, 0.4) 30%, transparent 31%)'
@@ -66,15 +75,15 @@ const ChessboardWrapper = ({
 
   return (
     <div
-    className="flex-grow bg-transparent flex items-center justify-center mb-1 overflow-hidden"
-    id="board-container"
->
-      <div className="board-container" style={{ 
-        width: boardWidth, 
+      className="flex-grow bg-transparent flex items-center justify-center mb-1 overflow-hidden"
+      id="board-container"
+    >
+      <div className="board-container" style={{
+        width: boardWidth,
         maxWidth: '100%',
         maxHeight: 'calc(100vh - 200px)'
       }}>
-        <Chessboard 
+        <Chessboard
           position={game.fen()}
           onPieceDrop={(source, target) => makeMove(source, target)}
           onSquareClick={handleSquareClick}
@@ -113,4 +122,4 @@ ChessboardWrapper.propTypes = {
   selectedSquare: PropTypes.string
 };
 
-export default ChessboardWrapper; 
+export default ChessboardWrapper;

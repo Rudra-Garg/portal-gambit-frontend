@@ -17,6 +17,9 @@ import { useNavigate } from "react-router-dom";
 // import TimeoutPopup from './game/components/TimeoutPopup';
 import GameEndPopup from './GameEndPopup';
 
+import {BACKEND_URL} from '../../config.js';
+
+
 const PortalChessGame = () => {
   // Initial state declarations with useState hooks
   const [game, setGame] = useState(() => new PortalChess()); // Manages chess game state
@@ -103,7 +106,8 @@ const PortalChessGame = () => {
         }
 
         setActiveGame(null);
-        navigate("/profile:userId");
+        navigate("/profile");
+
       } catch (error) {
         console.error('Error exiting game:', error);
       }
@@ -135,7 +139,7 @@ const PortalChessGame = () => {
     if (!gameId) return;
 
     const gameRef = ref(database, `games/${gameId}`);
-    const unsubscribe = onValue(gameRef, (snapshot) => {
+    const unsubscribe = onValue(gameRef,async (snapshot) => {
       const data = snapshot.val();
       if (data) {
         setGameState(data);
@@ -153,11 +157,16 @@ const PortalChessGame = () => {
 
           // Add this new block to handle game end state
           if (data.status === 'finished' && data.winner && data.reason) {
-            setGameEndDetails({
+
+            const gameDetails = {
               winner: data.winner,
               reason: data.reason
-            });
+          };
+            setGameEndDetails(gameDetails);
+            
             setShowGameEndPopup(true);
+            await archiveGame(gameDetails);
+
           }
 
         } catch (error) {
@@ -187,10 +196,10 @@ const PortalChessGame = () => {
   const syncGameTime = useCallback(() => {
     if (!gameState || !gameId || gameState.status !== 'active') return;
 
+
     const now = Date.now();
     const lastMoveTime = gameState.lastMoveTime || now;
     const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-
     const currentPlayerTime = gameState.current_turn === 'white'
       ? gameState.whiteTime
       : gameState.blackTime;
@@ -300,6 +309,11 @@ const PortalChessGame = () => {
 
         const gameStatus = newGame.isGameOver();
         if (gameStatus.over) {
+
+          const gameDetails = {
+            winner: gameStatus.winner,
+            reason: gameStatus.reason
+          };
           update(ref(database, `games/${gameId}`), {
             ...updates,
             status: 'finished',
@@ -307,11 +321,10 @@ const PortalChessGame = () => {
             reason: gameStatus.reason
           });
 
-          setGameEndDetails({
-            winner: gameStatus.winner,
-            reason: gameStatus.reason
-          });
+          setGameEndDetails(gameDetails);
           setShowGameEndPopup(true);
+          archiveGame(gameDetails);
+
         } else {
           update(ref(database, `games/${gameId}`), updates);
         }
@@ -345,9 +358,29 @@ const PortalChessGame = () => {
         setSelectedSquare(null);
       }
     } else {
+      // Portal mode handling
       if (!portalStart) {
+        // Check if square is occupied before setting portal start
+        if (game.get(square)) {
+          // Square is occupied, notify user
+          alert("Cannot place portal on an occupied square!");
+          return;
+        }
         setPortalStart(square);
       } else {
+        // Check if square is occupied before setting portal end
+        if (game.get(square)) {
+          // Square is occupied, notify user
+          alert("Cannot place portal on an occupied square!");
+          return;
+        }
+
+        // Also check if we're trying to place a portal on top of another portal
+        if (game.portals[square] || game.portals[portalStart]) {
+          alert("Cannot place portal on a square that already has a portal!");
+          return;
+        }
+
         try {
           const newGame = new PortalChess(game.fen(), gameState.portal_count);
           newGame.portals = { ...game.portals };
@@ -404,7 +437,8 @@ const PortalChessGame = () => {
     let timerInterval;
 
     if (gameState.status === 'active' && areBothPlayersJoined()) {
-      timerInterval = setInterval(() => {
+      timerInterval = setInterval(async () => {
+
         const now = Date.now();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
@@ -419,16 +453,22 @@ const PortalChessGame = () => {
           });
 
           if (newWhiteTime <= 0) {
+
+            const gameDetails = {
+              winner: 'black',
+              reason: 'timeout'
+            };
+
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'black',
               reason: 'timeout'
             });
-            setGameEndDetails({
-              winner: 'black',
-              reason: 'timeout'
-            });
+
+            setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
+            await archiveGame(gameDetails);
+
           }
         } else {
           const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
@@ -440,16 +480,22 @@ const PortalChessGame = () => {
           });
 
           if (newBlackTime <= 0) {
+
+            const gameDetails = {
+              winner: 'white',
+              reason: 'timeout'
+            };
+
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'white',
               reason: 'timeout'
             });
-            setGameEndDetails({
-              winner: 'white',
-              reason: 'timeout'
-            });
+
+            setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
+            await archiveGame(gameDetails);
+
           }
         }
       }, 1000);
@@ -461,6 +507,7 @@ const PortalChessGame = () => {
       }
     };
   }, [gameState, gameId, areBothPlayersJoined]);
+
 
   /**
    * Handles rematch requests
@@ -503,6 +550,68 @@ const PortalChessGame = () => {
       console.error('Error starting rematch:', error);
     }
   };
+
+  const archiveGame = async (gameDetails) => {
+    try {
+        // Wait a moment to ensure gameState is loaded
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Safely access gameState with null checks
+        if (!gameState) {
+            console.error("Cannot archive game: gameState is null");
+            return;
+        }
+
+        if (!gameState.white_player || !gameState.black_player) {
+            console.error("Cannot archive game: missing player information");
+            return;
+        }
+
+        const response = await fetch(`${BACKEND_URL}/history/games`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                game_id: gameId,
+                white_player_id: gameState.white_player,
+                black_player_id: gameState.black_player,
+                start_time: new Date(gameState.created_at || Date.now()).toISOString(),
+                end_time: new Date().toISOString(),
+                result: gameDetails.winner === 'white' ? 'white_win' : 
+                        gameDetails.winner === 'black' ? 'black_win' : 
+                        gameDetails.winner === 'draw' ? 'draw' : 'abandoned',
+                winner_id: gameDetails.winner === 'white' ? gameState.white_player :
+                          gameDetails.winner === 'black' ? gameState.black_player : null,
+                moves: moveHistory,
+                initial_position: 'standard',
+                white_rating: gameState.white_rating || 1200,
+                black_rating: gameState.black_rating || 1200,
+                rating_change: {
+                    white: gameDetails.winner === 'white' ? 15 : 
+                           gameDetails.winner === 'black' ? -15 : 0,
+                    black: gameDetails.winner === 'black' ? 15 : 
+                           gameDetails.winner === 'white' ? -15 : 0
+                },
+                game_type: `${gameState.portal_count}`,
+                time_control: {
+                    initial: (gameState.time_control || 10) * 60,
+                    increment: gameState.increment || 0
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Failed to archive game: ${errorData.detail || response.statusText}`);
+        }
+
+        console.log('Game archived successfully');
+    } catch (error) {
+        console.error('Error archiving game:', error);
+    }
+};
 
   // Game layout and component rendering
   return (

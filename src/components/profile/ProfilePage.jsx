@@ -27,22 +27,24 @@ const ProfilePage = () => {
       if (user && user.uid) {
         try {
           // First, get the access token
-          const tokenResponse = await fetch(`${BACKEND_URL}/auth/token`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              firebase_token: user.stsTokenManager.accessToken
-            }),
-          });
 
-          if (!tokenResponse.ok) {
-            throw new Error('Failed to get access token');
-          }
+          // const tokenResponse = await fetch(`${BACKEND_URL}/auth/token`, {
+          //   method: 'POST',
+          //   headers: {
+          //     'Content-Type': 'application/json',
+          //   },
+          //   body: JSON.stringify({
+          //     firebase_token: user.stsTokenManager.accessToken
+          //   }),
+          // });
 
-          const tokenData = await tokenResponse.json();
-          localStorage.setItem('access_token', tokenData.access_token);
+
+          // if (!tokenResponse.ok) {
+          //   throw new Error('Failed to get access token');
+          // }
+
+          // const tokenData = await tokenResponse.json();
+          // localStorage.setItem('access_token', tokenData.access_token);
 
           // Then fetch the profile using GET request
           const profileResponse = await fetch(`${BACKEND_URL}/profiles/${user.uid}`, {

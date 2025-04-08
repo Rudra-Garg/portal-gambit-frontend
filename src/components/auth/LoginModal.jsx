@@ -4,6 +4,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEm
 import { auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
+import {BACKEND_URL} from '../../config';
 
 const LoginModal = ({ onClose, onSwitchToSignup }) => {
     const [email, setEmail] = useState('');
@@ -13,18 +14,98 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
     const [verificationMessage, setVerificationMessage] = useState('');
     const navigate = useNavigate();
 
-    const saveAuthToken = (user) => {
+
+    const checkAndCreateProfile = async (user) => {
         try {
-            user.getIdToken().then((token) => {
-                localStorage.setItem('access_token', token);
-                localStorage.setItem('userId', user.uid);
-                localStorage.setItem('userEmail', user.email);
-                localStorage.setItem('emailVerified', user.emailVerified);
+            const checkResponse = await fetch(`${BACKEND_URL}/profiles/${user.uid}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
             });
+            if (checkResponse.status === 404) {
+                const createResponse = await fetch(`${BACKEND_URL}/profiles/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        display_name: user.displayName || 'Chess Player',
+                        draws: 0,
+                        email: user.email,
+                        games_played: 0,
+                        losses: 0,
+                        rating: 1200,
+                        uid: user.uid,
+                        username: user.email.split('@')[0],
+                        wins: 0
+                    })
+                });
+                if (!createResponse.ok) {
+                    throw new Error('Failed to create profile');
+                }
+            } else if (!checkResponse.ok) {
+                throw new Error('Failed to check profile');
+            }
         } catch (error) {
-            console.error('Error saving auth token:', error);
+            console.error('Profile check/create error:', error);
+            throw new Error('Failed to setup user profile');
         }
     };
+
+    const exchangeTokenWithBackend = async (firebaseToken) => {
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            const response = await fetch(`${BACKEND_URL}/auth/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firebase_token: firebaseToken,
+                })
+            });
+         
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.detail?.includes('Token used too early')) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    return exchangeTokenWithBackend(firebaseToken);
+                }
+                throw new Error(errorData.detail || 'Backend authentication failed');
+            }
+
+            const data = await response.json();
+            if (!data.access_token) {
+                throw new Error('Invalid response from backend');
+            }
+            return data;
+        } catch (error) {
+            console.error('Backend token exchange error:', error);
+            throw error;
+        }
+    };
+
+    const saveAuthToken = async (user) => {
+        try {
+            console.log('Getting Firebase token...');
+            const firebaseToken = await user.getIdToken(/* forceRefresh */ true);
+            
+            console.log('Exchanging token with backend...');
+            const backendTokens = await exchangeTokenWithBackend(firebaseToken);
+    
+            // Store tokens only after successful exchange
+            localStorage.setItem('access_token', backendTokens.access_token);
+            localStorage.setItem('token_type', backendTokens.token_type);
+            localStorage.setItem('userId', user.uid);
+            localStorage.setItem('userEmail', user.email);
+        } catch (error) {
+            console.error('Error saving auth tokens:', error);
+            throw new Error('Failed to complete authentication process');
+        }
+    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -33,7 +114,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            console.log(userCredential);
+            // console.log(userCredential);
             const user = userCredential.user;
 
             if (!user.emailVerified) {
@@ -44,14 +125,19 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             }
 
             const userId = user.uid;
-            saveAuthToken(userCredential.user);
+            console.log('User ID:', userId);
+            await saveAuthToken(userCredential.user);
+            await checkAndCreateProfile(user);
             onClose();
-            navigate(`/profile:userId`);
+            navigate(`/profile`);
         } catch (error) {
             console.log(error);
-
             if (error.code === 'auth/too-many-requests') {
-                setError('Too many failed login attempts. Please try again later or reset your password.');
+                setError('Too many failed login attempts. Please try again later.');
+            } else if (error.message.includes('Backend authentication failed')) {
+                setError('Backend authentication failed. Please try again.');
+            } else if (error.message.includes('Failed to setup user profile')) {
+                setError('Failed to setup user profile. Please try again.');
             } else {
                 setError('Failed to sign in. Please check your credentials.');
             }
@@ -73,13 +159,15 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
                 return;
             }
 
-            const userId = result.user.uid;
-            console.log(result.user);
-            saveAuthToken(result.user);
+            await saveAuthToken(user);
+            await checkAndCreateProfile(user);
             onClose();
-            navigate(`/profile:userId`);
+            navigate(`/profile`);
         } catch (error) {
-            setError('Failed to sign in with Google');
+            console.error('Google sign in error:', error);
+            setError(error.message.includes('Failed to setup user profile')
+                ? 'Failed to setup user profile. Please try again.'
+                : 'Failed to sign in with Google');
         } finally {
             setLoading(false);
         }

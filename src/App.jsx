@@ -16,7 +16,7 @@ const App = () => {
                     <Route path="/signup" element={<SignupForm />} /> */}
 
                     <Route
-                        path="/profile:userId"
+                        path="/profile"
                         element={
                             <PrivateRoute>
                                 <ProfilePage />
