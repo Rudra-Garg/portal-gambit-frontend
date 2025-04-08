@@ -195,6 +195,7 @@ const PortalChessGame = () => {
    */
 
 
+
   /**
    * Effect hook to start time sync interval
    * Runs every 5 seconds to keep time in sync
@@ -426,6 +427,7 @@ const PortalChessGame = () => {
   
     if (gameState.status === 'active' && areBothPlayersJoined()) {
       timerInterval = setInterval(async () => {
+
         const now = Date.now();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
@@ -434,14 +436,15 @@ const PortalChessGame = () => {
           // ONLY update the UI, not the database
           const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
           setWhiteTime(newWhiteTime);
-  
+]
           // Only write to database when time runs out
           if (newWhiteTime <= 0 && gameState.whiteTime > 0) {
+
             const gameDetails = {
               winner: 'black',
               reason: 'timeout'
             };
-  
+
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'black',
@@ -452,29 +455,32 @@ const PortalChessGame = () => {
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
+
           }
         } else {
           // ONLY update the UI, not the database
           const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
           setBlackTime(newBlackTime);
-  
+
           // Only write to database when time runs out
           if (newBlackTime <= 0 && gameState.blackTime > 0) {
+
             const gameDetails = {
               winner: 'white',
               reason: 'timeout'
             };
-  
+
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'white',
               reason: 'timeout',
               blackTime: 0
             });
-  
+
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
+
           }
         }
       }, 1000);
@@ -486,6 +492,7 @@ const PortalChessGame = () => {
       }
     };
   }, [gameState, gameId, areBothPlayersJoined]);
+
 
   /**
    * Handles rematch requests
