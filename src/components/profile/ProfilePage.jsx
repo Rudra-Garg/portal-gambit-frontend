@@ -27,6 +27,7 @@ const ProfilePage = () => {
       if (user && user.uid) {
         try {
           // First, get the access token
+
           // const tokenResponse = await fetch(`${BACKEND_URL}/auth/token`, {
           //   method: 'POST',
           //   headers: {
@@ -36,6 +37,7 @@ const ProfilePage = () => {
           //     firebase_token: user.stsTokenManager.accessToken
           //   }),
           // });
+
 
           // if (!tokenResponse.ok) {
           //   throw new Error('Failed to get access token');

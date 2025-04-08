@@ -16,7 +16,9 @@ import './PortalChessGame.css';
 import { useNavigate } from "react-router-dom";
 // import TimeoutPopup from './game/components/TimeoutPopup';
 import GameEndPopup from './GameEndPopup';
+
 import {BACKEND_URL} from '../../config.js';
+
 
 const PortalChessGame = () => {
   // Initial state declarations with useState hooks
@@ -105,6 +107,7 @@ const PortalChessGame = () => {
 
         setActiveGame(null);
         navigate("/profile");
+
       } catch (error) {
         console.error('Error exiting game:', error);
       }
@@ -154,6 +157,7 @@ const PortalChessGame = () => {
 
           // Add this new block to handle game end state
           if (data.status === 'finished' && data.winner && data.reason) {
+
             const gameDetails = {
               winner: data.winner,
               reason: data.reason
@@ -162,6 +166,7 @@ const PortalChessGame = () => {
             
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
+
           }
 
         } catch (error) {
@@ -191,10 +196,10 @@ const PortalChessGame = () => {
   const syncGameTime = useCallback(() => {
     if (!gameState || !gameId || gameState.status !== 'active') return;
 
+
     const now = Date.now();
     const lastMoveTime = gameState.lastMoveTime || now;
     const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-
     const currentPlayerTime = gameState.current_turn === 'white'
       ? gameState.whiteTime
       : gameState.blackTime;
@@ -304,6 +309,7 @@ const PortalChessGame = () => {
 
         const gameStatus = newGame.isGameOver();
         if (gameStatus.over) {
+
           const gameDetails = {
             winner: gameStatus.winner,
             reason: gameStatus.reason
@@ -318,6 +324,7 @@ const PortalChessGame = () => {
           setGameEndDetails(gameDetails);
           setShowGameEndPopup(true);
           archiveGame(gameDetails);
+
         } else {
           update(ref(database, `games/${gameId}`), updates);
         }
@@ -431,6 +438,7 @@ const PortalChessGame = () => {
 
     if (gameState.status === 'active' && areBothPlayersJoined()) {
       timerInterval = setInterval(async () => {
+
         const now = Date.now();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
@@ -445,6 +453,7 @@ const PortalChessGame = () => {
           });
 
           if (newWhiteTime <= 0) {
+
             const gameDetails = {
               winner: 'black',
               reason: 'timeout'
@@ -455,9 +464,11 @@ const PortalChessGame = () => {
               winner: 'black',
               reason: 'timeout'
             });
+
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
+
           }
         } else {
           const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
@@ -469,18 +480,22 @@ const PortalChessGame = () => {
           });
 
           if (newBlackTime <= 0) {
+
             const gameDetails = {
               winner: 'white',
               reason: 'timeout'
             };
+
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'white',
               reason: 'timeout'
             });
+
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
+
           }
         }
       }, 1000);
@@ -492,6 +507,7 @@ const PortalChessGame = () => {
       }
     };
   }, [gameState, gameId, areBothPlayersJoined]);
+
 
   /**
    * Handles rematch requests

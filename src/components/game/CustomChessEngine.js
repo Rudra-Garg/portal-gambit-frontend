@@ -6,11 +6,13 @@ export class PortalChess extends Chess {
     this.portals = {};
     this.portalMoves = 0;
     this.maxPortals = maxPortals;
+
     this.color_hashes = ['#FF5733', '#33A1FF', '#28A745', '#FFC107', '#8E44AD'];
   }
 
   moves({ square, verbose, visited } = {}) {
     console.log("portal list:", this.portals);
+
     // Enhanced visited state
     if (!visited) {
       visited = {
@@ -116,6 +118,7 @@ export class PortalChess extends Chess {
         const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
         const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
 
+
         // Check if there's a piece on the portal exit
         const pieceOnPortalExit = this.get(portalExit);
 
@@ -144,6 +147,7 @@ export class PortalChess extends Chess {
         }
 
         // Normal portal traversal logic continues if no piece on portal exit
+
         const originalPiece = this.remove(square);
         this.put(originalPiece, portalExit);
 
@@ -242,6 +246,7 @@ export class PortalChess extends Chess {
   }
 
   placePair(square1, square2) {
+
     // Verify that neither square is occupied
     if (this.get(square1) || this.get(square2)) {
       throw new Error("Cannot place portal on an occupied square");
@@ -273,6 +278,7 @@ export class PortalChess extends Chess {
       portalSquaresToRemove.forEach(square => {
         delete this.portals[square];
       });
+
     }
 
     // Find highest existing portal ID
@@ -312,6 +318,7 @@ export class PortalChess extends Chess {
           this.isDraw() ? 'draw' : null
     };
   }
+
 
   isCheckmate() {
     return super.isCheckmate();
