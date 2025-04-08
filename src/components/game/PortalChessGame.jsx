@@ -193,36 +193,12 @@ const PortalChessGame = () => {
    * Synchronizes game time with server
    * Updates time remaining for current player
    */
-  const syncGameTime = useCallback(() => {
-    if (!gameState || !gameId || gameState.status !== 'active') return;
 
-
-    const now = Date.now();
-    const lastMoveTime = gameState.lastMoveTime || now;
-    const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-    const currentPlayerTime = gameState.current_turn === 'white'
-      ? gameState.whiteTime
-      : gameState.blackTime;
-
-    const newTime = Math.max(0, currentPlayerTime - elapsedSeconds);
-
-    update(ref(database, `games/${gameId}`), {
-      [`${gameState.current_turn}Time`]: newTime,
-      lastMoveTime: now
-    });
-  }, [gameState, gameId]);
 
   /**
    * Effect hook to start time sync interval
    * Runs every 5 seconds to keep time in sync
    */
-  useEffect(() => {
-    if (!gameState || !gameId) return;
-
-    const syncInterval = setInterval(syncGameTime, 5000);
-
-    return () => clearInterval(syncInterval);
-  }, [gameState, gameId, syncGameTime]);
 
   /**
    * Handles chess piece movement
@@ -303,10 +279,15 @@ const PortalChessGame = () => {
           current_turn: newTurn,
           lastMoveTime: currentTime,
           lastMove: cleanMove,
-          whiteTime: gameState.current_turn === 'white' ? whiteTime : gameState.whiteTime,
-          blackTime: gameState.current_turn === 'black' ? blackTime : gameState.blackTime
+          // Calculate exact time remaining for the player who just moved
+          whiteTime: gameState.current_turn === 'white' 
+            ? Math.max(0, whiteTime) 
+            : gameState.whiteTime,
+          blackTime: gameState.current_turn === 'black' 
+            ? Math.max(0, blackTime) 
+            : gameState.blackTime
         };
-
+        
         const gameStatus = newGame.isGameOver();
         if (gameStatus.over) {
 
@@ -404,7 +385,14 @@ const PortalChessGame = () => {
             portals: newGame.portals,
             current_turn: newTurn,
             lastMoveTime: Date.now(),
-            lastMove: portalMove
+            lastMove: portalMove,
+            // Add these lines to update the time for the player who just placed a portal
+            whiteTime: gameState.current_turn === 'white' 
+              ? Math.max(0, whiteTime) 
+              : gameState.whiteTime,
+            blackTime: gameState.current_turn === 'black' 
+              ? Math.max(0, blackTime) 
+              : gameState.blackTime
           });
         } catch (error) {
           console.error('Portal placement error:', error);
@@ -430,84 +418,74 @@ const PortalChessGame = () => {
    */
   useEffect(() => {
     if (!gameState || !gameId) return;
-
+  
     setWhiteTime(gameState.whiteTime);
     setBlackTime(gameState.blackTime);
-
+  
     let timerInterval;
-
+  
     if (gameState.status === 'active' && areBothPlayersJoined()) {
       timerInterval = setInterval(async () => {
-
         const now = Date.now();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
-
+  
         if (gameState.current_turn === 'white') {
+          // ONLY update the UI, not the database
           const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
           setWhiteTime(newWhiteTime);
-
-          update(ref(database, `games/${gameId}`), {
-            whiteTime: newWhiteTime,
-            lastMoveTime: now
-          });
-
-          if (newWhiteTime <= 0) {
-
+  
+          // Only write to database when time runs out
+          if (newWhiteTime <= 0 && gameState.whiteTime > 0) {
             const gameDetails = {
               winner: 'black',
               reason: 'timeout'
             };
-
+  
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'black',
-              reason: 'timeout'
+              reason: 'timeout',
+              whiteTime: 0
             });
-
+  
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
-
           }
         } else {
+          // ONLY update the UI, not the database
           const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
           setBlackTime(newBlackTime);
-
-          update(ref(database, `games/${gameId}`), {
-            blackTime: newBlackTime,
-            lastMoveTime: now
-          });
-
-          if (newBlackTime <= 0) {
-
+  
+          // Only write to database when time runs out
+          if (newBlackTime <= 0 && gameState.blackTime > 0) {
             const gameDetails = {
               winner: 'white',
               reason: 'timeout'
             };
-
+  
             update(ref(database, `games/${gameId}`), {
               status: 'finished',
               winner: 'white',
-              reason: 'timeout'
+              reason: 'timeout',
+              blackTime: 0
             });
-
+  
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
-
           }
         }
       }, 1000);
     }
-
+  
     return () => {
       if (timerInterval) {
         clearInterval(timerInterval);
       }
     };
   }, [gameState, gameId, areBothPlayersJoined]);
-
 
   /**
    * Handles rematch requests
