@@ -436,7 +436,7 @@ const PortalChessGame = () => {
           // ONLY update the UI, not the database
           const newWhiteTime = Math.max(0, gameState.whiteTime - elapsedSeconds);
           setWhiteTime(newWhiteTime);
-]
+
           // Only write to database when time runs out
           if (newWhiteTime <= 0 && gameState.whiteTime > 0) {
 
