@@ -72,7 +72,7 @@ const LandingPage = () => {
         const isEmailVerified = localStorage.getItem('emailVerified') === 'true';
         
         if (userId && isEmailVerified) {
-            navigate('/profile:userId');
+            navigate('/profile');
         } else {
             setIsLoginModalOpen(true);
         }
@@ -83,7 +83,7 @@ const LandingPage = () => {
         const isEmailVerified = localStorage.getItem('emailVerified') === 'true';
         
         if (userId && isEmailVerified) {
-            navigate('/profile:userId');
+            navigate('/profile');
         } else {
             setIsSignupModalOpen(true);
         }

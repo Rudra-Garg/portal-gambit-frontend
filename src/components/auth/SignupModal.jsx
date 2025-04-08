@@ -165,7 +165,7 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                     await checkAndCreateProfile(user);
                     unsubscribe();
                     onClose();
-                    navigate(`/profile:userId`);
+                    navigate(`/profile`);
                 }
             });
 
@@ -193,7 +193,7 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
             await saveAuthToken(user);
             await checkAndCreateProfile(user);
             onClose();
-            navigate(`/profile:userId`);
+            navigate(`/profile`);
         } catch (error) {
             setError('Failed to sign in with Google');
         } finally {

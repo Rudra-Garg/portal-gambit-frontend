@@ -129,7 +129,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             await saveAuthToken(userCredential.user);
             await checkAndCreateProfile(user);
             onClose();
-            navigate(`/profile:userId`);
+            navigate(`/profile`);
         } catch (error) {
             console.log(error);
             if (error.code === 'auth/too-many-requests') {
@@ -162,7 +162,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             await saveAuthToken(user);
             await checkAndCreateProfile(user);
             onClose();
-            navigate(`/profile:userId`);
+            navigate(`/profile`);
         } catch (error) {
             console.error('Google sign in error:', error);
             setError(error.message.includes('Failed to setup user profile')
