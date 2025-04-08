@@ -163,7 +163,7 @@ const PortalChessGame = () => {
               reason: data.reason
           };
             setGameEndDetails(gameDetails);
-            
+            console.log(data);
             setShowGameEndPopup(true);
             await archiveGame(gameDetails);
 
