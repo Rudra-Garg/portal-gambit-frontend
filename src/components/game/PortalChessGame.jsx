@@ -351,9 +351,29 @@ const PortalChessGame = () => {
         setSelectedSquare(null);
       }
     } else {
+      // Portal mode handling
       if (!portalStart) {
+        // Check if square is occupied before setting portal start
+        if (game.get(square)) {
+          // Square is occupied, notify user
+          alert("Cannot place portal on an occupied square!");
+          return;
+        }
         setPortalStart(square);
       } else {
+        // Check if square is occupied before setting portal end
+        if (game.get(square)) {
+          // Square is occupied, notify user
+          alert("Cannot place portal on an occupied square!");
+          return;
+        }
+
+        // Also check if we're trying to place a portal on top of another portal
+        if (game.portals[square] || game.portals[portalStart]) {
+          alert("Cannot place portal on a square that already has a portal!");
+          return;
+        }
+
         try {
           const newGame = new PortalChess(game.fen(), gameState.portal_count);
           newGame.portals = { ...game.portals };
