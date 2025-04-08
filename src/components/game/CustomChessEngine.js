@@ -116,6 +116,34 @@ export class PortalChess extends Chess {
         const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
         const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
 
+        // Check if there's a piece on the portal exit
+        const pieceOnPortalExit = this.get(portalExit);
+
+        // If there's a piece on the portal exit, only allow capture moves
+        if (pieceOnPortalExit && pieceOnPortalExit.color !== piece.color) {
+          // Can only capture the piece on the portal
+          portalMoves.push({
+            color: piece.color,
+            from: square,
+            to: portalExit,
+            piece: piece.type,
+            via: [...visited.portalChain].join('->'),
+            portal: true,
+            flags: 'p',
+            san: `P${[...visited.portalChain].join('->')}-${portalExit}`,
+            captured: pieceOnPortalExit.type,
+            lan: `${square}${portalExit}`,
+            after: this.fen(),
+            before: this.fen()
+          });
+
+          // Skip normal portal traversal logic
+          visited.portals.delete(portalSquare);
+          visited.portalChain.pop();
+          return;
+        }
+
+        // Normal portal traversal logic continues if no piece on portal exit
         const originalPiece = this.remove(square);
         this.put(originalPiece, portalExit);
 
