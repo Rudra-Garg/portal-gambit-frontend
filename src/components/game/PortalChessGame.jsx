@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ref, update, onValue, get, remove } from 'firebase/database';
+import { ref, update, onValue, get, remove, runTransaction } from 'firebase/database';
 import { database } from '../../firebase/config';
 import { useAuth } from '../../contexts/AuthContext';
 import { PortalChess } from './CustomChessEngine';
@@ -36,6 +36,19 @@ const PortalChessGame = () => {
   const [showGameEndPopup, setShowGameEndPopup] = useState(false);
   const [gameEndDetails, setGameEndDetails] = useState(null);
 
+  const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  useEffect(() => {
+    const offsetRef = ref(database, '.info/serverTimeOffset');
+    const unsubscribe = onValue(offsetRef, (snapshot) => {
+      const offset = snapshot.val() || 0;
+      setServerTimeOffset(offset);
+    });
+    
+    return () => unsubscribe();
+  }, []);
+
+  const getServerTime = () => Date.now() + serverTimeOffset;
+
   /**
    * Checks if both players have joined the game
    * @returns {boolean} True if both white and black players are present
@@ -69,45 +82,89 @@ const PortalChessGame = () => {
    * Handles player exit from game
    * Updates database by removing player and cleaning up game if both players leave
    */
+  const [gameArchived, setGameArchived] = useState(false);
   const exitGame = async () => {
     if (activeGame) {
       try {
         const gameSnapshot = await get(ref(database, `games/${activeGame}`));
         const gameData = gameSnapshot.val();
-
+  
         if (!gameData) {
           console.error('Game not found');
           setActiveGame(null);
+          navigate("/profile");
           return;
         }
-
-        const updateData = {};
-
-        if (gameData.white_player === user.uid) {
-          updateData.white_player = null;
-          updateData.white_player_name = null;
-          updateData.white_player_email = null;
-        } else if (gameData.black_player === user.uid) {
-          updateData.black_player = null;
-          updateData.black_player_name = null;
-          updateData.black_player_email = null;
+  
+        // Check if game was active and should be archived as abandoned
+        if (gameData && gameData.status === 'active') {
+          // Determine winner based on who's leaving
+          const isWhiteLeaving = gameData.white_player === user.uid;
+          const isBlackLeaving = gameData.black_player === user.uid;
+          
+          const gameDetails = {
+            winner: isWhiteLeaving ? 'black' : 'white',
+            reason: 'abandoned'
+          };
+          setGameEndDetails(gameDetails);
+          setShowGameEndPopup(true);
+          // Use transaction for status update first
+          const gameStatusRef = ref(database, `games/${activeGame}/status`);
+          await runTransaction(gameStatusRef, (currentStatus) => {
+            if (currentStatus === 'finished') {
+              return currentStatus;
+            }
+            return 'finished';
+          });
+          
+          // Then update other game end details
+          await update(ref(database, `games/${activeGame}`), {
+            winner: gameDetails.winner,
+            reason: 'abandoned'
+          });
+          
+          // Archive the abandoned game
+          await archiveGame(gameDetails, gameData);
+          setGameArchived(true);
+          return;
         }
-
-        const bothPlayersLeaving =
-          (gameData.white_player === user.uid || !gameData.white_player) &&
-          (gameData.black_player === user.uid || !gameData.black_player);
-
-        if (bothPlayersLeaving) {
+        
+        // Now handle the player leaving using transaction
+        const gameRef = ref(database, `games/${activeGame}`);
+        await runTransaction(gameRef, (game) => {
+          if (game === null) {
+            return null; // Game was deleted, abort transaction
+          }
+          
+          // Create transaction update
+          if (game.white_player === user.uid) {
+            game.white_player = null;
+            game.white_player_name = null;
+            game.white_player_email = null;
+          } else if (game.black_player === user.uid) {
+            game.black_player = null;
+            game.black_player_name = null;
+            game.black_player_email = null;
+          }
+          
+          return game;
+        });
+        
+        // Check if both players are now gone
+        const updatedGameSnapshot = await get(ref(database, `games/${activeGame}`));
+        const updatedGameData = updatedGameSnapshot.val();
+        
+        if (updatedGameData && 
+            (!updatedGameData.white_player && !updatedGameData.black_player)) {
+          // Both players have left, remove the game
           await remove(ref(database, `games/${activeGame}`));
           console.log('Game deleted as both players have left');
         } else {
-          await update(ref(database, `games/${activeGame}`), updateData);
           console.log('Player removed from game');
         }
-
+  
         setActiveGame(null);
         navigate("/profile");
-
       } catch (error) {
         console.error('Error exiting game:', error);
       }
@@ -165,7 +222,7 @@ const PortalChessGame = () => {
             setGameEndDetails(gameDetails);
             console.log(data);
             setShowGameEndPopup(true);
-            await archiveGame(gameDetails);
+            await archiveGame(gameDetails,data);
 
           }
 
@@ -273,39 +330,61 @@ const PortalChessGame = () => {
         };
 
         const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
-        const currentTime = Date.now();
-        const updates = {
-          fen: newGame.fen(),
-          portals: newGame.portals,
-          current_turn: newTurn,
-          lastMoveTime: currentTime,
-          lastMove: cleanMove,
-          // Calculate exact time remaining for the player who just moved
-          whiteTime: gameState.current_turn === 'white' 
-            ? Math.max(0, whiteTime) 
-            : gameState.whiteTime,
-          blackTime: gameState.current_turn === 'black' 
-            ? Math.max(0, blackTime) 
-            : gameState.blackTime
-        };
+        const currentTime = getServerTime();
+        const lastMoveTime = gameState.lastMoveTime || currentTime;
+// Ensure we're dealing with numbers
+        const elapsedSeconds = Math.floor((currentTime - lastMoveTime) / 1000);
+
+        // Add validation for whiteTime and blackTime
+        const currentWhiteTime = typeof gameState.whiteTime === 'number' ? gameState.whiteTime : 600; // 10-min fallback
+        const currentBlackTime = typeof gameState.blackTime === 'number' ? gameState.blackTime : 600;
+
+        const updatedWhiteTime = gameState.current_turn === 'white' 
+          ? Math.max(0, currentWhiteTime - elapsedSeconds)
+          : currentWhiteTime;
+        const updatedBlackTime = gameState.current_turn === 'black'
+          ? Math.max(0, currentBlackTime - elapsedSeconds)
+          : currentBlackTime;
+          const updates = {
+            fen: newGame.fen(),
+            portals: newGame.portals,
+            current_turn: newTurn,
+            lastMoveTime: currentTime,
+            lastMove: cleanMove,
+            whiteTime: isNaN(updatedWhiteTime) ? currentWhiteTime : updatedWhiteTime,
+            blackTime: isNaN(updatedBlackTime) ? currentBlackTime : updatedBlackTime
+          };
         
         const gameStatus = newGame.isGameOver();
         if (gameStatus.over) {
-
+          if (gameState.status === 'finished') {
+            console.log("Game already finished, ignoring end condition");
+            return true;
+          }
           const gameDetails = {
             winner: gameStatus.winner,
             reason: gameStatus.reason
           };
-          update(ref(database, `games/${gameId}`), {
-            ...updates,
-            status: 'finished',
-            winner: gameStatus.winner,
-            reason: gameStatus.reason
+          const gameStatusRef = ref(database, `games/${gameId}/status`);
+
+          runTransaction(gameStatusRef, (currentStatus) => {
+            if (currentStatus === 'finished') {
+              console.log("Game already finished, ignoring end condition");
+              return currentStatus;
+            }
+            return 'finished';
+          }).then(() => {
+            // Then update the other fields
+            update(ref(database, `games/${gameId}`), {
+              ...updates,
+              winner: gameStatus.winner,
+              reason: gameStatus.reason
+            });
           });
 
           setGameEndDetails(gameDetails);
           setShowGameEndPopup(true);
-          archiveGame(gameDetails);
+          archiveGame(gameDetails,gameState);
 
         } else {
           update(ref(database, `games/${gameId}`), updates);
@@ -381,20 +460,31 @@ const PortalChessGame = () => {
             portal: true
           };
           const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
-          update(ref(database, `games/${gameId}`), {
-            fen: newGame.fen(),
-            portals: newGame.portals,
-            current_turn: newTurn,
-            lastMoveTime: Date.now(),
-            lastMove: portalMove,
-            // Add these lines to update the time for the player who just placed a portal
-            whiteTime: gameState.current_turn === 'white' 
-              ? Math.max(0, whiteTime) 
-              : gameState.whiteTime,
-            blackTime: gameState.current_turn === 'black' 
-              ? Math.max(0, blackTime) 
-              : gameState.blackTime
-          });
+          const currentTime = getServerTime();
+          const lastMoveTime = gameState.lastMoveTime || currentTime;
+// Ensure we're dealing with numbers
+          const elapsedSeconds = Math.floor((currentTime - lastMoveTime) / 1000);
+
+          // Add validation for whiteTime and blackTime
+          const currentWhiteTime = typeof gameState.whiteTime === 'number' ? gameState.whiteTime : 600; // 10-min fallback
+          const currentBlackTime = typeof gameState.blackTime === 'number' ? gameState.blackTime : 600;
+
+          const updatedWhiteTime = gameState.current_turn === 'white' 
+            ? Math.max(0, currentWhiteTime - elapsedSeconds)
+            : currentWhiteTime;
+          const updatedBlackTime = gameState.current_turn === 'black'
+            ? Math.max(0, currentBlackTime - elapsedSeconds)
+            : currentBlackTime;
+
+            update(ref(database, `games/${gameId}`), {
+              fen: newGame.fen(),
+              portals: newGame.portals,
+              current_turn: newTurn,
+              lastMoveTime: currentTime,
+              lastMove: portalMove,
+              whiteTime: isNaN(updatedWhiteTime) ? currentWhiteTime : updatedWhiteTime,
+              blackTime: isNaN(updatedBlackTime) ? currentBlackTime : updatedBlackTime
+            });
         } catch (error) {
           console.error('Portal placement error:', error);
           alert(`Maximum number of portals (${gameState.portal_count}) reached!`);
@@ -428,7 +518,7 @@ const PortalChessGame = () => {
     if (gameState.status === 'active' && areBothPlayersJoined()) {
       timerInterval = setInterval(async () => {
 
-        const now = Date.now();
+        const now = getServerTime();
         const lastMoveTime = gameState.lastMoveTime || now;
         const elapsedSeconds = Math.floor((now - lastMoveTime) / 1000);
         console.log(lastMoveTime, now, elapsedSeconds);
@@ -445,16 +535,26 @@ const PortalChessGame = () => {
               reason: 'timeout'
             };
 
-            update(ref(database, `games/${gameId}`), {
-              status: 'finished',
-              winner: 'black',
-              reason: 'timeout',
-              whiteTime: 0
+            const gameStatusRef = ref(database, `games/${gameId}/status`);
+
+            runTransaction(gameStatusRef, (currentStatus) => {
+              if (currentStatus === 'finished') {
+                // Already finished, don't change
+                return currentStatus;
+              }
+              return 'finished';
+            }).then(() => {
+              // Then update the other fields
+              update(ref(database, `games/${gameId}`), {
+                winner: 'black',
+                reason: 'timeout',
+                whiteTime: 0
+              });
             });
   
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
-            await archiveGame(gameDetails);
+            await archiveGame(gameDetails,gameState);
 
           }
         } else {
@@ -479,7 +579,7 @@ const PortalChessGame = () => {
 
             setGameEndDetails(gameDetails);
             setShowGameEndPopup(true);
-            await archiveGame(gameDetails);
+            await archiveGame(gameDetails,gameState);
 
           }
         }
@@ -536,21 +636,26 @@ const PortalChessGame = () => {
     }
   };
 
-  const archiveGame = async (gameDetails) => {
+  const archiveGame = async (gameDetails, gameDataParam) => {
     try {
         // Wait a moment to ensure gameState is loaded
+        const gameData = gameDataParam || gameState;
         await new Promise(resolve => setTimeout(resolve, 100));
         
         // Safely access gameState with null checks
-        if (!gameState) {
-            console.error("Cannot archive game: gameState is null");
-            return;
+        if (!gameData) {
+          console.error("Cannot archive game: game data is null");
+          return;
         }
-
-        if (!gameState.white_player || !gameState.black_player) {
+       
+        if (!gameData.white_player || !gameData.black_player) {
             console.error("Cannot archive game: missing player information");
             return;
         }
+
+        const formattedMoves = Array.isArray(moveHistory) 
+      ? moveHistory.map(move => typeof move === 'string' ? move : move.san || '')
+      : [];
 
         const response = await fetch(`${BACKEND_URL}/history/games`, {
             method: 'POST',
@@ -569,7 +674,7 @@ const PortalChessGame = () => {
                         gameDetails.winner === 'draw' ? 'draw' : 'abandoned',
                 winner_id: gameDetails.winner === 'white' ? gameState.white_player :
                           gameDetails.winner === 'black' ? gameState.black_player : null,
-                moves: moveHistory,
+                moves:  formattedMoves,
                 initial_position: 'standard',
                 white_rating: gameState.white_rating || 1200,
                 black_rating: gameState.black_rating || 1200,
@@ -588,8 +693,9 @@ const PortalChessGame = () => {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Failed to archive game: ${errorData.detail || response.statusText}`);
+          const errorData = await response.json();
+          console.error('API error details:', errorData);
+          throw new Error(`Failed to archive game: ${response.status} ${response.statusText}`);
         }
 
         console.log('Game archived successfully');
@@ -666,7 +772,9 @@ const PortalChessGame = () => {
         <GameEndPopup
           winner={gameEndDetails.winner}
           reason={gameEndDetails.reason}
-          onClose={() => setShowGameEndPopup(false)}
+          onClose={() => {
+            setShowGameEndPopup(false);
+          }}
           onRematch={handleRematch}
           onExit={exitGame}
         />

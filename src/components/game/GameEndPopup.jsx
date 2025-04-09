@@ -15,6 +15,16 @@ const GameEndPopup = ({ winner, reason, onClose, onRematch, onExit }) => {
                 return 'Game Over!';
         }
     };
+    const handleExit = () => {
+        onClose();  // Close the popup first
+         // Then call the exit handler
+        
+        // Add a small delay before navigation
+          // Use navigate from react-router-dom
+          window.location.href = "/profile";
+       
+      };
+      
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -28,7 +38,7 @@ const GameEndPopup = ({ winner, reason, onClose, onRematch, onExit }) => {
                         Rematch
                     </button>
                     <button
-                        onClick={onExit}
+                        onClick={handleExit}
                         className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                     >
                         Exit

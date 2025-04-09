@@ -89,7 +89,7 @@ const GameSetup = () => {
         status: "waiting",
         created_at: Date.now(),
         time_control: timeControl,
-        whiteTime: timeControl * 60, // Convert minutes to seconds
+        whiteTime: 5, // Convert minutes to seconds
         blackTime: timeControl * 60,
         portal_count: portals,
         chat: {},
