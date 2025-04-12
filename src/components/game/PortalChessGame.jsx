@@ -1,23 +1,22 @@
-import {useCallback, useEffect, useState} from 'react';
-import {get, onValue, ref, remove, runTransaction, update} from 'firebase/database';
-import {database} from '../../firebase/config';
-import {useAuth} from '../../contexts/AuthContext';
-import {PortalChess} from './CustomChessEngine';
+import { useCallback, useEffect, useState } from 'react';
+import { get, onValue, ref, remove, runTransaction, update, push, set } from 'firebase/database';
+import { database } from '../../firebase/config';
+import { useAuth } from '../../contexts/AuthContext';
+import { PortalChess } from './CustomChessEngine';
 import PlayerInfo from './components/PlayerInfo';
 import ChessboardWrapper from './components/ChessboardWrapper';
 import GameHistory from './components/GameHistory';
 import ChatComponent from './components/ChatComponent';
-import {useLostPieces} from './hooks/useLostPieces';
-import {useChat} from './hooks/useChat';
-import {useVoiceChat} from './hooks/useVoiceChat';
-import {useMoveHistory} from './hooks/useMoveHistory';
+import { useLostPieces } from './hooks/useLostPieces';
+import { useChat } from './hooks/useChat';
+import { useVoiceChat } from './hooks/useVoiceChat';
+import { useMoveHistory } from './hooks/useMoveHistory';
 import './PortalChessGame.css';
-import {useNavigate} from "react-router-dom";
-// import TimeoutPopup from './game/components/TimeoutPopup';
+import { useNavigate } from "react-router-dom";
+import { v4 as uuidv4 } from 'uuid';
 import GameEndPopup from './GameEndPopup';
-
-import {BACKEND_URL} from '../../config.js';
-
+import { BACKEND_URL } from '../../config.js';
+import Modal from '../common/Modal';
 
 const PortalChessGame = () => {
     // Initial state declarations with useState hooks
@@ -25,7 +24,7 @@ const PortalChessGame = () => {
     const [portalMode, setPortalMode] = useState(false);       // Controls portal placement mode
     const [portalStart, setPortalStart] = useState(null);      // Stores starting point of portal
     const [selectedSquare, setSelectedSquare] = useState(null); // Tracks selected chess square
-    const {user} = useAuth();
+    const { user } = useAuth();
     const [gameState, setGameState] = useState(null);
     const [gameId, setGameId] = useState(null);
     const [activeGame, setActiveGame] = useState(null);
@@ -34,6 +33,9 @@ const PortalChessGame = () => {
     const [isTimerRunning, setIsTimerRunning] = useState(false);
     const [showGameEndPopup, setShowGameEndPopup] = useState(false);
     const [gameEndDetails, setGameEndDetails] = useState(null);
+    // Add these new state variables for rematch functionality
+    const [showRematchRequest, setShowRematchRequest] = useState(false);
+    const [rematchRequestFrom, setRematchRequestFrom] = useState(null);
 
     const [serverTimeOffset, setServerTimeOffset] = useState(0);
     useEffect(() => {
@@ -123,7 +125,8 @@ const PortalChessGame = () => {
                     });
 
                     // Archive the abandoned game
-                    await archiveGame(gameDetails, gameData);
+                    const uniqueArchiveId = uuidv4();
+                    await archiveGame(uniqueArchiveId, gameDetails, gameData);
                     setGameArchived(true);
                     return;
                 }
@@ -175,7 +178,7 @@ const PortalChessGame = () => {
     // Custom hooks for managing different aspects of the game
     const moveHistory = useMoveHistory(gameId);        // Tracks game move history
     const [lostPieces, updateLostPieces] = useLostPieces(game); // Manages captured pieces
-    const {chatMessages, newMessage, setNewMessage, sendMessage} = useChat(gameId, user); // Chat functionality
+    const { chatMessages, newMessage, setNewMessage, sendMessage } = useChat(gameId, user); // Chat functionality
 
     const {
         voiceChatEnabled,
@@ -221,7 +224,8 @@ const PortalChessGame = () => {
                         setGameEndDetails(gameDetails);
                         console.log(data);
                         setShowGameEndPopup(true);
-                        await archiveGame(gameDetails, data);
+                        const uniqueArchiveId = uuidv4();
+                        await archiveGame(uniqueArchiveId, gameDetails, data);
 
                     }
 
@@ -255,7 +259,7 @@ const PortalChessGame = () => {
      * Effect hook to start time sync interval
      * Runs every 5 seconds to keep time in sync
      */
-    const archiveGame = async (gameDetails, gameDataToArchive) => {
+    const archiveGame = async (archiveId, gameDetails, gameDataToArchive) => {
         try {
             if (!gameDataToArchive) {
                 console.error("Cannot archive game: game data provided is null or undefined");
@@ -277,7 +281,8 @@ const PortalChessGame = () => {
                     'Authorization': `Bearer ${localStorage.getItem('access_token')}`
                 },
                 body: JSON.stringify({
-                    game_id: gameId,
+                    game_id: archiveId, // *** Use the generated UUID for the history entry ID ***
+                    firebase_game_ref: gameId,
                     white_player_id: gameDataToArchive.white_player,
                     black_player_id: gameDataToArchive.black_player,
                     start_time: new Date(gameDataToArchive.created_at || Date.now()).toISOString(),
@@ -347,9 +352,9 @@ const PortalChessGame = () => {
         }
         try {
             const newGame = new PortalChess(game.fen(), gameState.portal_count);
-            newGame.portals = {...game.portals};
+            newGame.portals = { ...game.portals };
 
-            const moves = newGame.moves({square: sourceSquare, verbose: true});
+            const moves = newGame.moves({ square: sourceSquare, verbose: true });
 
             const portalMove = moves.find(move =>
                 move.portal &&
@@ -396,7 +401,7 @@ const PortalChessGame = () => {
 
                 // Add validation for whiteTime and blackTime
                 const currentWhiteTime = typeof gameState.whiteTime === 'number' ? gameState.whiteTime : 600; // 10-min
-                                                                                                              // fallback
+                // fallback
                 const currentBlackTime = typeof gameState.blackTime === 'number' ? gameState.blackTime : 600;
 
                 const updatedWhiteTime = gameState.current_turn === 'white'
@@ -456,7 +461,8 @@ const PortalChessGame = () => {
                             setGameEndDetails(gameDetails);
                             setShowGameEndPopup(true);
                             // *** Pass the captured data to archiveGame ***
-                            await archiveGame(gameDetails, currentDataForArchive);
+                            const uniqueArchiveId = uuidv4();
+                            await archiveGame(uniqueArchiveId, gameDetails, currentDataForArchive);
                             setGameArchived(true); // You might need this state variable
                         } else {
                             console.log("Game status transaction aborted (already finished).");
@@ -524,7 +530,7 @@ const PortalChessGame = () => {
 
                 try {
                     const newGame = new PortalChess(game.fen(), gameState.portal_count);
-                    newGame.portals = {...game.portals};
+                    newGame.portals = { ...game.portals };
                     newGame.placePair(portalStart, square);
 
                     setGame(newGame);
@@ -542,12 +548,12 @@ const PortalChessGame = () => {
                     const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
                     const currentTime = getServerTime();
                     const lastMoveTime = gameState.lastMoveTime || currentTime;
-// Ensure we're dealing with numbers
+                    // Ensure we're dealing with numbers
                     const elapsedSeconds = Math.floor((currentTime - lastMoveTime) / 1000);
 
                     // Add validation for whiteTime and blackTime
                     const currentWhiteTime = typeof gameState.whiteTime === 'number' ? gameState.whiteTime : 600; // 10-min
-                                                                                                                  // fallback
+                    // fallback
                     const currentBlackTime = typeof gameState.blackTime === 'number' ? gameState.blackTime : 600;
 
                     const updatedWhiteTime = gameState.current_turn === 'white'
@@ -609,10 +615,10 @@ const PortalChessGame = () => {
 
                     if (newWhiteTime <= 0 && gameState.whiteTime > 0 && gameState.status !== 'finished') { // Check status
                         console.log("White timed out.");
-                        const gameDetails = {winner: 'black', reason: 'timeout'};
+                        const gameDetails = { winner: 'black', reason: 'timeout' };
                         const gameStatusRef = ref(database, `games/${gameId}/status`);
                         // *** Capture current data before update ***
-                        const currentDataForArchive = {...gameState, whiteTime: 0};
+                        const currentDataForArchive = { ...gameState, whiteTime: 0 };
 
                         runTransaction(gameStatusRef, (currentStatus) => {
                             if (currentStatus === 'finished') {
@@ -631,7 +637,8 @@ const PortalChessGame = () => {
                                     setGameEndDetails(gameDetails);
                                     setShowGameEndPopup(true);
                                     // *** Pass captured data ***
-                                    await archiveGame(gameDetails, currentDataForArchive);
+                                    const uniqueArchiveId = uuidv4();
+                                    await archiveGame(uniqueArchiveId, gameDetails, currentDataForArchive);
                                     setGameArchived(true);
                                 }
                             });
@@ -642,10 +649,10 @@ const PortalChessGame = () => {
 
                     if (newBlackTime <= 0 && gameState.blackTime > 0 && gameState.status !== 'finished') { // Check status
                         console.log("Black timed out.");
-                        const gameDetails = {winner: 'white', reason: 'timeout'};
+                        const gameDetails = { winner: 'white', reason: 'timeout' };
                         const gameStatusRef = ref(database, `games/${gameId}/status`);
                         // *** Capture current data before update ***
-                        const currentDataForArchive = {...gameState, blackTime: 0};
+                        const currentDataForArchive = { ...gameState, blackTime: 0 };
 
                         runTransaction(gameStatusRef, (currentStatus) => {
                             if (currentStatus === 'finished') {
@@ -664,7 +671,8 @@ const PortalChessGame = () => {
                                     setGameEndDetails(gameDetails);
                                     setShowGameEndPopup(true);
                                     // *** Pass captured data ***
-                                    await archiveGame(gameDetails, currentDataForArchive);
+                                    const uniqueArchiveId = uuidv4();
+                                    await archiveGame(uniqueArchiveId, gameDetails, currentDataForArchive);
                                     setGameArchived(true);
                                 }
                             });
@@ -713,7 +721,7 @@ const PortalChessGame = () => {
                 // Other resets
                 portals: {},
                 portal_count: gameState.portal_count,
-                lostPieces: {white: [], black: []},
+                lostPieces: { white: [], black: [] },
                 winner: null,
                 reason: null
                 // No need to manage moveHistory array here
@@ -737,7 +745,41 @@ const PortalChessGame = () => {
     };
 
 
-    // Game layout and component rendering
+
+
+
+    // Add notification listener
+    useEffect(() => {
+        if (!gameId || !user) return;
+
+        const notificationsRef = ref(database, `games/${gameId}/notifications`);
+        const unsubscribe = onValue(notificationsRef, (snapshot) => {
+            const notifications = snapshot.val();
+            if (!notifications) return;
+
+            Object.entries(notifications).forEach(([key, notification]) => {
+                if (notification.type === 'rematch_request' && notification.from !== user.uid) {
+                    setRematchRequestFrom({
+                        uid: notification.from,
+                        name: notification.fromName
+                    });
+                    setShowRematchRequest(true);
+                    // Remove the notification after processing
+                    update(ref(database, `games/${gameId}/notifications/${key}`), null);
+                }
+            });
+        });
+
+        return () => unsubscribe();
+    }, [gameId, user]);
+
+    // Handle accepting rematch request
+    const handleAcceptRematch = () => {
+        setShowRematchRequest(false);
+        handleRematch();
+    };
+
+
     return (
         <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
             {/* Game board section */}
@@ -810,8 +852,38 @@ const PortalChessGame = () => {
                     }}
                     onRematch={handleRematch}
                     onExit={exitGame}
+                    gameId={gameId}
                 />
             )}
+
+            {/* Add Rematch Request Modal */}
+            {showRematchRequest && rematchRequestFrom && (
+                <Modal
+                    isOpen={showRematchRequest}
+                    onClose={() => setShowRematchRequest(false)}
+                    title="Rematch Request"
+                >
+                    <div className="p-4">
+                        <p className="mb-4">{rematchRequestFrom.name} wants a rematch!</p>
+                        <div className="flex justify-end gap-4">
+                            <button
+                                onClick={() => setShowRematchRequest(false)}
+                                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                            >
+                                Decline
+                            </button>
+                            <button
+                                onClick={handleAcceptRematch}
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            >
+                                Accept
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Game end popup */}
         </div>
     );
 };

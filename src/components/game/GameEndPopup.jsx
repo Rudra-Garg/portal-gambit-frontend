@@ -1,6 +1,11 @@
 import React from 'react';
+import { ref, push, set } from 'firebase/database';
+import { database } from '../../firebase/config';
+import { useAuth } from '../../contexts/AuthContext';
 
-const GameEndPopup = ({ winner, reason, onClose, onRematch, onExit }) => {
+const GameEndPopup = ({ winner, reason, onClose, onRematch, onExit, gameId }) => {
+    const { user } = useAuth();
+
     const getMessage = () => {
         switch (reason) {
             case 'checkmate':
@@ -15,24 +20,37 @@ const GameEndPopup = ({ winner, reason, onClose, onRematch, onExit }) => {
                 return 'Game Over!';
         }
     };
+
+    const handleRematch = async () => {
+        try {
+            // Create a new notification in Firebase
+            const notificationRef = push(ref(database, `games/${gameId}/notifications`));
+            await set(notificationRef, {
+                type: 'rematch_request',
+                from: user.uid,
+                fromName: user.displayName || user.email,
+                timestamp: Date.now()
+            });
+
+            // Call the original onRematch handler
+            onRematch();
+        } catch (error) {
+            console.error('Error sending rematch notification:', error);
+        }
+    };
+
     const handleExit = () => {
-        onClose();  // Close the popup first
-         // Then call the exit handler
-        
-        // Add a small delay before navigation
-          // Use navigate from react-router-dom
-          window.location.href = "/profile";
-       
-      };
-      
+        onClose();
+        window.location.href = "/profile";
+    };
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
+        <div className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-50">
+            <div className="bg-white/90 p-6 rounded-lg shadow-lg backdrop-blur-sm">
                 <h2 className="text-xl font-bold mb-4">{getMessage()}</h2>
                 <div className="flex justify-center gap-4">
                     <button
-                        onClick={onRematch}
+                        onClick={handleRematch}
                         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                     >
                         Rematch
