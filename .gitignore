@@ -26,3 +26,5 @@ dist-ssr
 .env
 .env.local
 repo_contents.txt
+.firebase/
+.firebaserc
