@@ -689,14 +689,22 @@ const PortalChessGame = () => {
     }, [gameState, gameId, areBothPlayersJoined, getServerTime]);
 
 
-    /**
-     * Handles rematch requests
-     * Resets game state while keeping players
-     */
-    const handleRematch = async () => {
-        try {
-            const initialTime = gameState.time_control * 60;
-            const currentTime = getServerTime(); // Use server time
+  // Add this after your other useEffect hooks
+  useEffect(() => {
+    // Clean up portal start when exiting portal mode
+    if (!portalMode) {
+      setPortalStart(null);
+    }
+  }, [portalMode]);
+
+  /**
+   * Handles rematch requests
+   * Resets game state while keeping players
+   */
+  const handleRematch = async () => {
+    try {
+      const initialTime = gameState.time_control * 60;
+      const currentTime = Date.now();
 
             const newGameState = {
                 // Keep player info
