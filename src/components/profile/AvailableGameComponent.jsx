@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 
 function AvailableGamesComponent({ availableGames, joinGame, backToSetup }) {
   return (
-    <div className="border-t pt-4">
+    <div className="bg-indigo-100 rounded-xl h-full p-6 shadow-md border border-indigo-100">
       <h2 className="text-xl font-bold text-indigo-800 mb-6">Available Games</h2>
 
       {availableGames.length > 0 ? (
@@ -49,6 +49,7 @@ function AvailableGamesComponent({ availableGames, joinGame, backToSetup }) {
     </div>
   );
 }
+
 AvailableGamesComponent.propTypes = {
   availableGames: PropTypes.arrayOf(
     PropTypes.shape({

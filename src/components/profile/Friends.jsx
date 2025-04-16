@@ -402,9 +402,9 @@ const Friends = () => {
   const filteredPendingRequests = pendingRequests.filter(req => req.status === "pending");
 
   return (
-    <div className="bg-white rounded-b-xl p-6 shadow-lg border border-gray-100">
+    <div className="bg-indigo-100 h-full p-6 shadow-md">
       {/* Header */}
-      <h2 className="text-2xl font-bold text-indigo-700 mb-6">Friends</h2>
+      <h2 className="text-2xl font-bold text-indigo-800 mb-6">Friends</h2>
 
       {/* Add Friend & Search - Updated with search dropdown */}
       <div className="space-y-4 mb-6">

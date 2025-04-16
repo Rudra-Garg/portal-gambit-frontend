@@ -689,22 +689,22 @@ const PortalChessGame = () => {
     }, [gameState, gameId, areBothPlayersJoined, getServerTime]);
 
 
-  // Add this after your other useEffect hooks
-  useEffect(() => {
-    // Clean up portal start when exiting portal mode
-    if (!portalMode) {
-      setPortalStart(null);
-    }
-  }, [portalMode]);
+    // Add this after your other useEffect hooks
+    useEffect(() => {
+        // Clean up portal start when exiting portal mode
+        if (!portalMode) {
+            setPortalStart(null);
+        }
+    }, [portalMode]);
 
-  /**
-   * Handles rematch requests
-   * Resets game state while keeping players
-   */
-  const handleRematch = async () => {
-    try {
-      const initialTime = gameState.time_control * 60;
-      const currentTime = Date.now();
+    /**
+     * Handles rematch requests
+     * Resets game state while keeping players
+     */
+    const handleRematch = async () => {
+        try {
+            const initialTime = gameState.time_control * 60;
+            const currentTime = Date.now();
 
             const newGameState = {
                 // Keep player info
@@ -789,7 +789,7 @@ const PortalChessGame = () => {
 
 
     return (
-        <div className="portal-chess-container bg-purple-200 flex flex-col md:flex-row w-full h-screen">
+        <div className="portal-chess-container bg-gradient-to-bl from-indigo-500/70 to-blue-600/70 flex flex-col md:flex-row w-full h-screen">
             {/* Game board section */}
             <div className="w-full md:w-1/2 bg-transparent p-2 flex flex-col h-full max-h-screen overflow-hidden">
                 <PlayerInfo

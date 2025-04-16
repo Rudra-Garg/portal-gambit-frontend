@@ -1,9 +1,9 @@
-import {useEffect, useState} from 'react';
-import {useLocation, useNavigate} from 'react-router-dom';
-import {useAuth} from '../../contexts/AuthContext';
-import {signOut} from 'firebase/auth';
-import {auth, database} from '../../firebase/config';
-import {get, push, ref, remove, update} from 'firebase/database';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { signOut } from 'firebase/auth';
+import { auth, database } from '../../firebase/config';
+import { get, push, ref, remove, update } from 'firebase/database';
 import AvailableGamesComponent from './AvailableGameComponent.jsx';
 
 
@@ -17,41 +17,41 @@ const initialBoardSetup = () => {
     }
 
     // Place black pieces
-    board[0][0] = {type: "rook", color: "black"};
-    board[0][1] = {type: "knight", color: "black"};
-    board[0][2] = {type: "bishop", color: "black"};
-    board[0][3] = {type: "queen", color: "black"};
-    board[0][4] = {type: "king", color: "black"};
-    board[0][5] = {type: "bishop", color: "black"};
-    board[0][6] = {type: "knight", color: "black"};
-    board[0][7] = {type: "rook", color: "black"};
+    board[0][0] = { type: "rook", color: "black" };
+    board[0][1] = { type: "knight", color: "black" };
+    board[0][2] = { type: "bishop", color: "black" };
+    board[0][3] = { type: "queen", color: "black" };
+    board[0][4] = { type: "king", color: "black" };
+    board[0][5] = { type: "bishop", color: "black" };
+    board[0][6] = { type: "knight", color: "black" };
+    board[0][7] = { type: "rook", color: "black" };
 
     // Place black pawns
     for (let i = 0; i < 8; i++) {
-        board[1][i] = {type: "pawn", color: "black"};
+        board[1][i] = { type: "pawn", color: "black" };
     }
 
     // Place white pawns
     for (let i = 0; i < 8; i++) {
-        board[6][i] = {type: "pawn", color: "white"};
+        board[6][i] = { type: "pawn", color: "white" };
     }
 
     // Place white pieces
-    board[7][0] = {type: "rook", color: "white"};
-    board[7][1] = {type: "knight", color: "white"};
-    board[7][2] = {type: "bishop", color: "white"};
-    board[7][3] = {type: "queen", color: "white"};
-    board[7][4] = {type: "king", color: "white"};
-    board[7][5] = {type: "bishop", color: "white"};
-    board[7][6] = {type: "knight", color: "white"};
-    board[7][7] = {type: "rook", color: "white"};
+    board[7][0] = { type: "rook", color: "white" };
+    board[7][1] = { type: "knight", color: "white" };
+    board[7][2] = { type: "bishop", color: "white" };
+    board[7][3] = { type: "queen", color: "white" };
+    board[7][4] = { type: "king", color: "white" };
+    board[7][5] = { type: "bishop", color: "white" };
+    board[7][6] = { type: "knight", color: "white" };
+    board[7][7] = { type: "rook", color: "white" };
 
     return board;
 };
 
 
 const GameSetup = () => {
-    const {user} = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -67,17 +67,17 @@ const GameSetup = () => {
     // Process navigation state if coming from another page
     useEffect(() => {
         if (location.state) {
-            const {createGame, findGames, joinGameId, timeControl, playerColor, portalCount} = location.state;
+            const { createGame, findGames, joinGameId, timeControl, playerColor, portalCount } = location.state;
 
             if (createGame) {
                 handleCreateGame(timeControl, playerColor, portalCount);
-                navigate(location.pathname, {replace: true}); // Clear state
+                navigate(location.pathname, { replace: true }); // Clear state
             } else if (findGames) {
                 handleFindGames(timeControl);
-                navigate(location.pathname, {replace: true}); // Clear state
+                navigate(location.pathname, { replace: true }); // Clear state
             } else if (joinGameId) {
                 joinGame(joinGameId);
-                navigate(location.pathname, {replace: true}); // Clear state
+                navigate(location.pathname, { replace: true }); // Clear state
             }
         }
     }, [location]);
@@ -310,7 +310,7 @@ const GameSetup = () => {
             ) : (
 
                 <div
-                    className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl h-full p-6 shadow-md border border-indigo-100">
+                    className="bg-indigo-100 rounded-xl h-full p-6 shadow-md border border-indigo-100">
                     <h2 className="text-2xl font-bold text-indigo-800 mb-6">Game Setup</h2>
 
                     <div className="space-y-6">
@@ -320,7 +320,7 @@ const GameSetup = () => {
                                 type="range" min="3" max="10" step="1"
                                 value={gameTime}
                                 onChange={(e) => setGameTime(Number(e.target.value))}
-                                className="w-full accent-indigo-600 h-2 bg-indigo-100 rounded-lg appearance-none cursor-pointer"
+                                className="w-full accent-indigo-600 h-2 bg-white border border-indigo-200 rounded-lg appearance-none cursor-pointer hover:bg-indigo-50"
                             />
                             <div className="flex justify-between mt-2 text-sm text-indigo-600">
                                 <span>3 min</span>
@@ -335,11 +335,10 @@ const GameSetup = () => {
                                 {['white', 'black', 'random'].map(color => (
                                     <button
                                         key={color}
-                                        className={`py-2 rounded-lg transition-all duration-200 ${
-                                            playerColor === color
-                                                ? 'bg-indigo-600 text-white font-medium shadow-md'
-                                                : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
-                                        }`}
+                                        className={`py-2 rounded-lg transition-all duration-200 ${playerColor === color
+                                            ? 'bg-indigo-600 text-white font-medium shadow-md'
+                                            : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                                            }`}
                                         onClick={() => setPlayerColor(color)}
                                     >
                                         {color.charAt(0).toUpperCase() + color.slice(1)}
@@ -354,11 +353,10 @@ const GameSetup = () => {
                                 {[2, 3, 4].map(num => (
                                     <button
                                         key={num}
-                                        className={`py-2 rounded-lg transition-all duration-200 ${
-                                            portalCount === num
-                                                ? 'bg-indigo-600 text-white font-medium shadow-md'
-                                                : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
-                                        }`}
+                                        className={`py-2 rounded-lg transition-all duration-200 ${portalCount === num
+                                            ? 'bg-indigo-600 text-white font-medium shadow-md'
+                                            : 'bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50'
+                                            }`}
                                         onClick={() => setPortalCount(num)}
                                     >
                                         {num}

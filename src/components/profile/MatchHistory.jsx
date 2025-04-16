@@ -29,30 +29,29 @@ const MatchHistory = () => {
   };
 
   return (
-    <div className="bg-white rounded-b-xl p-6 shadow-lg min-h-[500px] border border-gray-100">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Match History</h2>
-      
+    <div className="bg-indigo-100 h-full p-6 shadow-md">
+      <h2 className="text-2xl font-bold text-indigo-800 mb-6">Match History</h2>
+
       <div className="flex gap-2 mb-6">
         {['all', 'win', 'loss', 'draw'].map(option => (
-          <button 
-            key={option} 
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              filter === option 
-                ? 'bg-gray-800 text-white font-medium' 
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+          <button
+            key={option}
+            className={`px-4 py-2 rounded-lg transition-colors ${filter === option
+              ? 'bg-indigo-600 text-white font-medium'
+              : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
+              }`}
             onClick={() => setFilter(option)}
           >
             {option.charAt(0).toUpperCase() + option.slice(1) + (option !== 'all' ? 's' : '')}
           </button>
         ))}
       </div>
-      
+
       <div className="space-y-4 overflow-y-auto max-h-64">
         {filteredMatches.map(match => (
-          <div key={match.id} className="p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100 hover:border-gray-300 transition-all duration-200">
+          <div key={match.id} className="p-4 bg-white rounded-lg shadow-sm border border-indigo-100 hover:border-indigo-300 transition-all duration-200">
             <div className="flex justify-between items-center mb-2">
-              <div className="font-semibold text-gray-800">vs. {match.opponent}</div>
+              <div className="font-semibold text-indigo-800">vs. {match.opponent}</div>
               <div className={`text-xs font-medium px-2 py-1 rounded-full border ${getResultColor(match.result)}`}>
                 {getResultIcon(match.result)} {match.result.toUpperCase()}
               </div>
@@ -78,7 +77,7 @@ const MatchHistory = () => {
           </div>
         ))}
         {filteredMatches.length === 0 && (
-          <div className="text-center py-12 text-gray-400 bg-gray-50 rounded-lg border border-gray-100">
+          <div className="text-center py-12 text-gray-400 bg-white rounded-lg border border-indigo-100">
             No matches found with the selected filter
           </div>
         )}
