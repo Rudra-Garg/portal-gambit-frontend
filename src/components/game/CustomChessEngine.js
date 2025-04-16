@@ -89,7 +89,21 @@ export class PortalChess extends Chess {
       );
     });
 
-    const unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
+    let unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
+
+    // Filter out standard moves that target portal squares with same-color pieces
+    unblockedMoves = unblockedMoves.filter(move => {
+      const to = typeof move === 'string' ? move.slice(2, 4) : move.to;
+
+      // Skip if the target isn't a portal square
+      if (!this.portals[to]) return true;
+
+      const portalExit = this.portals[to].linkedTo;
+      const pieceOnPortalExit = this.get(portalExit);
+
+      // Block move if a same-color piece is on the other end of the portal
+      return !(pieceOnPortalExit && pieceOnPortalExit.color === piece.color);
+    });
 
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
       if (visited.portals.has(portalSquare)) return;
@@ -100,6 +114,17 @@ export class PortalChess extends Chess {
       if (piece.type === 'p') {
         const startRank = piece.color === 'w' ? '2' : '7';
         if (square[1] !== startRank) return;
+      }
+
+      // Check if there's a piece of same color on either portal square
+      const portalExit = portal.linkedTo;
+      const pieceOnPortalEntry = this.get(portalSquare);
+      const pieceOnPortalExit = this.get(portalExit);
+
+      // Skip this portal if either portal square has a piece of the same color
+      if ((pieceOnPortalEntry && pieceOnPortalEntry.color === piece.color) ||
+        (pieceOnPortalExit && pieceOnPortalExit.color === piece.color)) {
+        return;
       }
 
       visited.portals.add(portalSquare);
