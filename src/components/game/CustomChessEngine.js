@@ -92,17 +92,34 @@ export class PortalChess extends Chess {
     let unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
 
     // Filter out standard moves that target portal squares with same-color pieces
+    // or straight pawn moves to portals with opposite-color pieces on exit
     unblockedMoves = unblockedMoves.filter(move => {
       const to = typeof move === 'string' ? move.slice(2, 4) : move.to;
+      const from = typeof move === 'string' ? move.slice(0, 2) : move.from;
 
       // Skip if the target isn't a portal square
       if (!this.portals[to]) return true;
 
       const portalExit = this.portals[to].linkedTo;
       const pieceOnPortalExit = this.get(portalExit);
+      const movingPiece = this.get(from);
 
       // Block move if a same-color piece is on the other end of the portal
-      return !(pieceOnPortalExit && pieceOnPortalExit.color === piece.color);
+      if (pieceOnPortalExit && pieceOnPortalExit.color === movingPiece.color) {
+        return false;
+      }
+
+      // Special case for pawns: Block straight moves to portals with opposite-color pieces
+      if (movingPiece.type === 'p' && pieceOnPortalExit && pieceOnPortalExit.color !== movingPiece.color) {
+        // Check if this is a straight move (same file/column)
+        if (from.charAt(0) === to.charAt(0)) {
+          // This is a straight pawn move to a portal with opposite piece on exit
+          // Block this move
+          return false;
+        }
+      }
+
+      return true;
     });
 
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
