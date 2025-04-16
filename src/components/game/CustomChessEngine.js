@@ -122,6 +122,52 @@ export class PortalChess extends Chess {
       return true;
     });
 
+    // Special case: Add diagonal pawn captures through portals
+    if (piece && piece.type === 'p') {
+      // Calculate diagonal capture squares for pawns
+      const file = square.charCodeAt(0) - 97;  // 'a' is 97 in ASCII
+      const rank = parseInt(square[1]) - 1;    // Convert to 0-indexed
+
+      // Direction of pawn movement (1 for white, -1 for black)
+      const direction = piece.color === 'w' ? 1 : -1;
+
+      // Check both diagonal squares
+      [-1, 1].forEach(lateral => {
+        const captureFile = file + lateral;
+        const captureRank = rank + direction;
+
+        // Check if coordinates are valid
+        if (captureFile >= 0 && captureFile < 8 && captureRank >= 0 && captureRank < 8) {
+          const diagonalSquare = String.fromCharCode(97 + captureFile) + (captureRank + 1);
+
+          // Check if there's a portal on the diagonal square
+          if (this.portals[diagonalSquare]) {
+            const portalExit = this.portals[diagonalSquare].linkedTo;
+            const pieceOnExit = this.get(portalExit);
+
+            // If there's an opposite-colored piece on the portal exit, add a capture move
+            if (pieceOnExit && pieceOnExit.color !== piece.color) {
+              portalMoves.push({
+                color: piece.color,
+                from: square,
+                to: portalExit,
+                piece: piece.type,
+                via: diagonalSquare,
+                portal: true,
+                flags: 'p', // portal capture
+                san: `P${diagonalSquare}-${portalExit}`,
+                captured: pieceOnExit.type,
+                lan: `${square}${portalExit}`,
+                after: this.fen(),
+                before: this.fen()
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // Continue with existing portal traversal logic
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
       if (visited.portals.has(portalSquare)) return;
 
