@@ -501,11 +501,38 @@ const PortalChessGame = () => {
                     setSelectedSquare(square);
                 }
             } else {
+                // Check if clicked square is a portal entrance with opponent's piece at exit
+                if (game.portals[square]) {
+                    const portalExit = game.portals[square].linkedTo;
+                    const pieceAtExit = game.get(portalExit);
+                    const selectedPiece = game.get(selectedSquare);
+
+                    // If there's an opponent's piece at the exit, try to make a portal capture move
+                    if (pieceAtExit && selectedPiece && pieceAtExit.color !== selectedPiece.color) {
+                        // Check if this move is valid through the portal
+                        const moves = game.moves({ square: selectedSquare, verbose: true });
+                        const portalCaptureMove = moves.find(move =>
+                            move.portal &&
+                            move.to === portalExit &&
+                            move.via &&
+                            move.via.includes(square)
+                        );
+
+                        if (portalCaptureMove) {
+                            // Execute capture move through portal
+                            makeMove(selectedSquare, portalExit);
+                            setSelectedSquare(null);
+                            return;
+                        }
+                    }
+                }
+
+                // Regular move logic
                 makeMove(selectedSquare, square);
                 setSelectedSquare(null);
             }
         } else {
-            // Portal mode handling
+            // Portal mode handling remains unchanged
             if (!portalStart) {
                 // Check if square is occupied before setting portal start
                 if (game.get(square)) {
@@ -580,7 +607,7 @@ const PortalChessGame = () => {
                 }
             }
         }
-    }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove]);
+    }, [portalMode, selectedSquare, game, portalStart, gameState, gameId, makeMove, getServerTime]);
 
     const amIWhitePlayer = gameState?.white_player === user?.uid;
 
@@ -689,22 +716,22 @@ const PortalChessGame = () => {
     }, [gameState, gameId, areBothPlayersJoined, getServerTime]);
 
 
-  // Add this after your other useEffect hooks
-  useEffect(() => {
-    // Clean up portal start when exiting portal mode
-    if (!portalMode) {
-      setPortalStart(null);
-    }
-  }, [portalMode]);
+    // Add this after your other useEffect hooks
+    useEffect(() => {
+        // Clean up portal start when exiting portal mode
+        if (!portalMode) {
+            setPortalStart(null);
+        }
+    }, [portalMode]);
 
-  /**
-   * Handles rematch requests
-   * Resets game state while keeping players
-   */
-  const handleRematch = async () => {
-    try {
-      const initialTime = gameState.time_control * 60;
-      const currentTime = Date.now();
+    /**
+     * Handles rematch requests
+     * Resets game state while keeping players
+     */
+    const handleRematch = async () => {
+        try {
+            const initialTime = gameState.time_control * 60;
+            const currentTime = Date.now();
 
             const newGameState = {
                 // Keep player info
