@@ -24,9 +24,19 @@
   background-color: rgba(0, 0, 0, 0.03);
 }
 
+/* Remove old piece-symbol style if only using icons */
+/*
 .piece-symbol {
-  font-size: 1.125rem; /* text-lg equivalent */
+  font-size: 1.125rem;
   line-height: 1;
+}
+*/
+
+/* New style for SVG icons */
+.piece-icon {
+  width: 1.125rem;  /* Adjust size as needed, matches old text-lg */
+  height: 1.125rem; /* Adjust size as needed */
+  vertical-align: middle; /* Align icon nicely with count */
 }
 
 .piece-count {
@@ -34,6 +44,7 @@
   font-weight: 500;
   margin-left: 0.25rem;
   color: #666;
+  line-height: 1.125rem; /* Match icon height for alignment */
 }
 
 /* Dark mode support */
@@ -50,6 +61,7 @@
     background-color: rgba(255, 255, 255, 0.03);
   }
 
+  
   .piece-count {
     color: #999;
   }
