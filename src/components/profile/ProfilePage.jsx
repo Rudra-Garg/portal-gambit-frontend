@@ -32,6 +32,7 @@ const staggerContainer = {
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
+  
   console.log(user.stsTokenManager.accessToken);
   console.log(user.uid);
   const [userProfile, setUserProfile] = useState({

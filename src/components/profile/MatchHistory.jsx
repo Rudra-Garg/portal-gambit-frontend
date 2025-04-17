@@ -13,7 +13,7 @@ const MatchHistory = () => {
   useEffect(() => {
     const fetchMatchHistory = async () => {
       if (!user || !user.uid) return;
-      
+
       try {
         setLoading(true);
         const response = await fetch(
@@ -30,12 +30,12 @@ const MatchHistory = () => {
         }
 
         const data = await response.json();
-        
+
         // Get unique opponent IDs
-        const opponentIds = [...new Set(data.map(game => 
+        const opponentIds = [...new Set(data.map(game =>
           game.white_player_id === user.uid ? game.black_player_id : game.white_player_id
         ))];
-        
+
         // Fetch opponent profiles
         const profilesData = {};
         await Promise.all(opponentIds.map(async (opponentId) => {
@@ -48,7 +48,7 @@ const MatchHistory = () => {
                 }
               }
             );
-            
+
             if (profileResponse.ok) {
               const profileData = await profileResponse.json();
               profilesData[opponentId] = profileData;
@@ -57,44 +57,44 @@ const MatchHistory = () => {
             console.error(`Error fetching profile for ${opponentId}:`, err);
           }
         }));
-        
+
         setOpponentProfiles(profilesData);
-        
+
         // Transform the API data to match our component's format
         const formattedMatches = data.map(game => {
           // Determine if the current user won or lost
           const isUserWhite = game.white_player_id === user.uid;
           let result;
           let opponentId;
-          
+
           if (game.result === 'draw') {
             result = 'draw';
-          } else if ((isUserWhite && game.result === 'white_win') || 
-                     (!isUserWhite && game.result === 'black_win')) {
+          } else if ((isUserWhite && game.result === 'white_win') ||
+            (!isUserWhite && game.result === 'black_win')) {
             result = 'win';
           } else {
             result = 'loss';
           }
-          
+
           // Get opponent ID
           opponentId = isUserWhite ? game.black_player_id : game.white_player_id;
-          
+
           // Format date from ISO string
           const date = new Date(game.start_time).toLocaleDateString();
-          
+
           // Format time control (convert seconds to minutes)
           const timeControlMinutes = Math.floor(game.time_control.initial / 60);
           const timeControl = `${timeControlMinutes} min`;
-          
+
           // Get player's rating
           const playerRating = isUserWhite ? game.white_rating : game.black_rating;
-          
+
           // Get portal count
-          const portalCount = typeof game.game_type === 'string' && 
-                              game.game_type.startsWith('portal_gambit_') 
-                                ? game.game_type.replace('portal_gambit_', '') 
-                                : game.game_type || 0;
-          
+          const portalCount = typeof game.game_type === 'string' &&
+            game.game_type.startsWith('portal_gambit_')
+            ? game.game_type.replace('portal_gambit_', '')
+            : game.game_type || 0;
+
           return {
             id: game.game_id,
             opponentId,
@@ -105,7 +105,7 @@ const MatchHistory = () => {
             portalCount: parseInt(portalCount)
           };
         });
-        
+
         setMatches(formattedMatches);
         setError(null);
       } catch (err) {
@@ -136,13 +136,13 @@ const MatchHistory = () => {
       default: return '⟷';
     }
   };
-  
+
   // Get opponent display name
   const getOpponentName = (opponentId) => {
     if (opponentProfiles[opponentId]) {
-      return opponentProfiles[opponentId].username || 
-             opponentProfiles[opponentId].displayName || 
-             opponentId.substring(0, 8);
+      return opponentProfiles[opponentId].username ||
+        opponentProfiles[opponentId].displayName ||
+        opponentId.substring(0, 8);
     }
     return opponentId.substring(0, 8) + "...";
   };
@@ -153,23 +153,22 @@ const MatchHistory = () => {
 
       <div className="flex gap-2 mb-6">
 
-      {['all', 'win', 'loss', 'draw'].map(option => (
-        <button 
-          key={option} 
-          className={`px-4 py-2 rounded-lg transition-colors ${
-            filter === option 
-              ? 'bg-gray-800 text-white font-medium' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-          onClick={() => setFilter(option)}
-        >
-          {option === 'all' ? 'All' : 
-          option === 'loss' ? 'Loss' : 
-          option.charAt(0).toUpperCase() + option.slice(1) + 's'}
-        </button>
-      ))}
-    </div>
-      
+        {['all', 'win', 'loss', 'draw'].map(option => (
+          <button
+            key={option}
+            className={`px-4 py-2 rounded-lg transition-colors ${filter === option
+                ? 'bg-gray-800 text-white font-medium'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            onClick={() => setFilter(option)}
+          >
+            {option === 'all' ? 'All' :
+              option === 'loss' ? 'Loss' :
+                option.charAt(0).toUpperCase() + option.slice(1) + 's'}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
