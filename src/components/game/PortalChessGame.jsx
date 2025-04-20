@@ -354,19 +354,24 @@ const PortalChessGame = () => {
             const newGame = new PortalChess(game.fen(), gameState.portal_count);
             newGame.portals = { ...game.portals };
 
-            const moves = newGame.moves({ square: sourceSquare, verbose: true });
+            // Get all valid moves for the source square
+            const validMoves = newGame.moves({ square: sourceSquare, verbose: true });
 
-            const portalMove = moves.find(move =>
-                move.portal &&
-                move.to === targetSquare
-            );
+            // Find a valid move that matches our target square
+            const validMove = validMoves.find(move => move.to === targetSquare);
 
+            if (!validMove) {
+                console.log('Invalid move:', sourceSquare, 'to', targetSquare);
+                return false;
+            }
+
+            // Now execute the move with appropriate parameters
             let move;
-            if (portalMove) {
+            if (validMove.portal) {
                 move = newGame.move({
                     from: sourceSquare,
                     to: targetSquare,
-                    via: portalMove.via,
+                    via: validMove.via,
                     portal: true
                 });
             } else {
