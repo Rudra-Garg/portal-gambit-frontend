@@ -57,7 +57,7 @@ const GameSetup = () => {
 
     const [gameTime, setGameTime] = useState(5);
     const [playerColor, setPlayerColor] = useState('random');
-    const [portalCount, setPortalCount] = useState(2); 
+    const [portalCount, setPortalCount] = useState(2);
 
     const [isLoading, setIsLoading] = useState(false);
     const [availableGames, setAvailableGames] = useState([]);
@@ -85,7 +85,7 @@ const GameSetup = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            navigate('/login');
+            navigate('/');
         } catch (error) {
         }
     };
