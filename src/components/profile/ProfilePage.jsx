@@ -6,6 +6,9 @@ import Friends from './Friends';
 import MatchHistory from './MatchHistory';
 import AuthContext from "../../contexts/AuthContext.jsx";
 import { BACKEND_URL } from "../../config.js";
+import { signOut } from 'firebase/auth';
+import { auth } from '../../firebase/config';
+import { useNavigate } from 'react-router-dom';
 
 // Animation Variants (similar to LandingPage)
 const fadeIn = {
@@ -33,8 +36,11 @@ const staggerContainer = {
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
 
+  const navigate = useNavigate();
+  
   // console.log(user.stsTokenManager.accessToken);
   // console.log(user.uid);
+
   const [userProfile, setUserProfile] = useState({
     username: 'Loading...', // Default placeholder
     email: 'Loading...',    // Default placeholder
@@ -110,11 +116,20 @@ const ProfilePage = () => {
 
   const [activeSection, setActiveSection] = useState('friends');
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/');
+    } catch (error) {
+      // Optionally handle error
+    }
+  };
+
   return (
     // Updated background to match LandingPage gradient style
 
     <div className="min-h-screen bg-gradient-to-br from-indigo-500/70 to-blue-700/70 text-gray-800 py-12 px-4 sm:px-6 lg:px-8 relative">
-      {/* Add chess pattern background similar to LandingPage */}
+      {/* Remove the top-right logout button */}
       <div className="absolute inset-0 bg-[url('/chess-pattern.png')] opacity-5 bg-repeat" style={{ backgroundSize: '200px' }}></div>
 
       <motion.div
@@ -126,7 +141,7 @@ const ProfilePage = () => {
         {/* Left Column */}
         <motion.div className="lg:w-2/5 space-y-8" variants={fadeIn}>
 
-          {/* User Profile Header - Updated with glassmorphism styling */}
+          {/* User Profile Header - Updated with logout button */}
           <motion.div
             className="bg-indigo-100 backdrop-blur-md rounded-xl p-6 shadow-lg border border-white/30 overflow-hidden"
             variants={slideUp}
@@ -141,9 +156,18 @@ const ProfilePage = () => {
                   : <BiUserCircle />}
               </motion.div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl font-semibold text-indigo-700 truncate" title={userProfile.display_name || userProfile.username}>
-                  {userProfile.display_name || userProfile.username}
-                </h1>
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-semibold text-indigo-700 truncate" title={userProfile.display_name || userProfile.username}>
+                    {userProfile.display_name || userProfile.username}
+                  </h1>
+                  <button
+                    onClick={handleLogout}
+                    className="ml-4 px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg shadow hover:bg-red-600 transition flex items-center gap-1"
+                  >
+                    <span className="hidden sm:inline">Logout</span>
+                    <BiUserCircle className="w-4 h-4" />
+                  </button>
+                </div>
                 <p className="text-gray-600 text-sm truncate" title={userProfile.email}>{userProfile.email}</p>
               </div>
             </div>
@@ -162,7 +186,7 @@ const ProfilePage = () => {
               <motion.div className="flex items-center space-x-2 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm" variants={slideUp}>
                 <BiGame className="text-green-500 text-lg flex-shrink-0" />
                 <div>
-                  <span className="font-medium text-gray-600 block">Played</span>
+                  <span className="font-medium text-gray-600 block">Games Played</span>
                   <span className="text-lg font-semibold text-gray-800">{userProfile.games_played}</span>
                 </div>
               </motion.div>

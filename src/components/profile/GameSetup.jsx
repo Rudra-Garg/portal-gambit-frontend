@@ -57,7 +57,7 @@ const GameSetup = () => {
 
     const [gameTime, setGameTime] = useState(5);
     const [playerColor, setPlayerColor] = useState('random');
-    const [portalCount, setPortalCount] = useState(2);
+    const [portalCount, setPortalCount] = useState(2); 
 
     const [isLoading, setIsLoading] = useState(false);
     const [availableGames, setAvailableGames] = useState([]);
@@ -348,8 +348,8 @@ const GameSetup = () => {
 
                         <div>
                             <label className="block font-medium text-indigo-700 mb-3">Number of Portals</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[2, 3, 4].map(num => (
+                            <div className="grid grid-cols-5 gap-2">
+                                {[0, 1, 2, 3, 4].map(num => (
                                     <button
                                         key={num}
                                         className={`py-2 rounded-lg transition-all duration-200 ${portalCount === num
