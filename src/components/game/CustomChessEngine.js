@@ -18,7 +18,8 @@ export class PortalChess extends Chess {
         portals: new Set(),        // currently used portals
         portalChain: [],          // sequence of portals used
         blocks: new Set(),         // blocked squares
-        moves: new Map()          // accumulate moves across chain
+        moves: new Map(),          // accumulate moves across chain
+        simulChecked: new Set()    // NEW: track squares checked for simultaneous existence
       };
     }
 
@@ -27,6 +28,52 @@ export class PortalChess extends Chess {
     const piece = this.get(square);
 
     if (!piece) return standardMoves;
+
+    // Handle piece on portal (simultaneous existence)
+    if (this.portals[square] && !visited.simulChecked.has(square)) {
+      const linkedSquare = this.portals[square].linkedTo;
+
+      // Mark both squares as checked to prevent loops
+      visited.simulChecked.add(square);
+      visited.simulChecked.add(linkedSquare);
+
+      // Only calculate moves from linked square if there isn't our own piece there
+      const pieceAtLinked = this.get(linkedSquare);
+      if (!pieceAtLinked || pieceAtLinked.color !== piece.color) {
+        // Clone the piece for temporary placement
+        const tempPiece = { ...piece };
+
+        // Save original board state
+        const originalPieceAtLinked = pieceAtLinked;
+
+        // Temporarily place piece at linked square to calculate moves
+        if (pieceAtLinked) this.remove(linkedSquare);
+        this.put(tempPiece, linkedSquare);
+
+        // Calculate moves but don't recurse into portal traversal
+        const linkedMoves = this.moves({
+          square: linkedSquare,
+          verbose: true,
+          visited: { ...visited } // Clone visited state to isolate this calculation
+        });
+
+        // Restore original board state
+        this.remove(linkedSquare);
+        if (originalPieceAtLinked) {
+          this.put(originalPieceAtLinked, linkedSquare);
+        }
+
+        // Add these moves to our collection with special flag
+        for (const move of linkedMoves) {
+          standardMoves.push({
+            ...move,
+            simulPortalMove: true,
+            simulFrom: linkedSquare,
+            originalFrom: square
+          });
+        }
+      }
+    }
 
     const isSquareInPiecePath = (from, to, checkSquare, pieceType) => {
       const fromFile = from.charCodeAt(0) - 97; // Convert 'a' to 0
@@ -299,6 +346,36 @@ export class PortalChess extends Chess {
   }
 
   move(moveObj) {
+    // Handle simultaneous portal moves
+    if (moveObj.simulPortalMove) {
+      const piece = this.get(moveObj.originalFrom || moveObj.from);
+      if (!piece) return null;
+
+      // Execute the move directly from original position
+      this.remove(moveObj.originalFrom || moveObj.from);
+
+      // Handle potential capture at target square
+      const targetPiece = this.get(moveObj.to);
+      if (targetPiece) {
+        this.remove(moveObj.to);
+      }
+
+      // Complete the move
+      this.put(piece, moveObj.to);
+      this._turn = this._turn === 'w' ? 'b' : 'w';
+
+      // Return move data with the special flags
+      return {
+        color: piece.color,
+        from: moveObj.originalFrom || moveObj.from,
+        to: moveObj.to,
+        simulFrom: moveObj.simulFrom,
+        piece: piece.type,
+        simulPortalMove: true,
+        captured: targetPiece?.type || null
+      };
+    }
+    // Handle regular portal moves and standard moves with existing code
     console.log("trying to move: ", moveObj)
     if (moveObj.portal) {
       const piece = this.get(moveObj.from);
