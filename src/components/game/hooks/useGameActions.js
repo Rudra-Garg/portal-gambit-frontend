@@ -39,6 +39,7 @@ export const useGameActions = (
             return false;
         }
         if (isArchivingLocally) {
+
             return false;
         }
 
@@ -50,11 +51,35 @@ export const useGameActions = (
             const newGame = new PortalChess(currentFen, gameState?.portal_count);
             newGame.portals = { ...game.portals };
 
-            const moves = newGame.moves({ square: sourceSquare, verbose: true });
-            const portalMove = moves.find(move => move.portal && move.to === targetSquare);
+            // Get all valid moves for the source square
+            const validMoves = newGame.moves({ square: sourceSquare, verbose: true });
+
+            // Find a valid move that matches our target square
+            const validMove = validMoves.find(move => move.to === targetSquare);
+
+            if (!validMove) {
+                console.log('Invalid move:', sourceSquare, 'to', targetSquare);
+                return false;
+            }
+
+            // Now execute the move with appropriate parameters
             let moveResult;
-            if (portalMove) {
-                moveResult = newGame.move({ from: sourceSquare, to: targetSquare, via: portalMove.via, portal: true });
+            if (validMove.portal) {
+                moveResult = newGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    via: validMove.via,
+                    portal: true
+                });
+            } else if (validMove.simulPortalMove) {
+                // Handle simultaneous portal moves
+                moveResult = newGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    simulPortalMove: true,
+                    simulFrom: validMove.simulFrom,
+                    originalFrom: sourceSquare
+                });
             } else {
                 moveResult = newGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
             }
@@ -125,11 +150,13 @@ export const useGameActions = (
                         };
                     }).then(async (transactionResult) => {
                         if (transactionResult.committed) {
+
                             setGameEndDetails(gameDetails);
                             setShowGameEndPopup(true);
                             push(movesRef, moveDataWithTimestamp).then(() => {
                                 initiateArchiving(currentDataForArchive, gameDetails);
                             }).catch(error => {
+
                                 initiateArchiving(currentDataForArchive, gameDetails);
                             });
                         }
@@ -141,6 +168,7 @@ export const useGameActions = (
                         update(ref(database, `games/${gameId}`), updatesForFirebase),
                         push(movesRef, moveDataWithTimestamp)
                     ]).catch(error => {
+
                     });
                 }
                 return true;
@@ -173,6 +201,7 @@ export const useGameActions = (
             }
         } else {
             if (!isMyTurn || !isMyTurn()) {
+
                 return;
             }
             if (!portalStart) {
