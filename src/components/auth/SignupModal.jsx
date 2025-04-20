@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, G
 import { auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
-import {BACKEND_URL} from '../../config';
+import { BACKEND_URL } from '../../config';
 
 const SignupModal = ({ onClose, onSwitchToLogin }) => {
     const [username, setUsername] = useState('');
@@ -69,7 +69,7 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                     firebase_token: firebaseToken,
                 })
             });
-         
+
             if (!response.ok) {
                 const errorData = await response.json();
                 if (errorData.detail?.includes('Token used too early')) {
@@ -92,12 +92,10 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
 
     const saveAuthToken = async (user) => {
         try {
-            console.log('Getting Firebase token...');
             const firebaseToken = await user.getIdToken(/* forceRefresh */ true);
-            
-            console.log('Exchanging token with backend...');
+
             const backendTokens = await exchangeTokenWithBackend(firebaseToken);
-    
+
             // Store tokens only after successful exchange
             localStorage.setItem('access_token', backendTokens.access_token);
             localStorage.setItem('token_type', backendTokens.token_type);
@@ -152,8 +150,6 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
             });
             await sendEmailVerification(userCredential.user);
 
-            console.log(userCredential);
-            
             setVerificationMessage('Verification email sent! Please check your inbox and verify your email before continuing.');
 
             setLoading(false);
@@ -170,7 +166,6 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
             });
 
         } catch (error) {
-            console.log(error);
             setError('Failed to create account: ' + error.message);
             setLoading(false);
         }
@@ -189,7 +184,6 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
                 return;
             }
 
-            console.log(result.user);
             await saveAuthToken(user);
             await checkAndCreateProfile(user);
             onClose();
@@ -203,11 +197,11 @@ const SignupModal = ({ onClose, onSwitchToLogin }) => {
 
     return (
         <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6">
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6">
             {error && (
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}

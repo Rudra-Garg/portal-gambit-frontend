@@ -29,26 +29,22 @@ export const useGameState = (
                     setGame(newGame);
 
                     if (data.status === 'finished' && data.winner && data.reason) {
-                        console.log("useGameState: Status is 'finished'. Showing popup.");
                         const gameDetails = {
                             winner: data.winner,
                             reason: data.reason
                         };
-                        setGameEndDetails(prevDetails => 
+                        setGameEndDetails(prevDetails =>
                             JSON.stringify(prevDetails) !== JSON.stringify(gameDetails) ? gameDetails : prevDetails
                         );
                         setShowGameEndPopup(true);
                     } else if (data.status === 'active') {
-                        console.log("useGameState: Status is 'active'. Hiding popup.");
                         setShowGameEndPopup(false);
                         setGameEndDetails(null);
                     } else if (data.status === 'waiting') {
-                        console.log("useGameState: Status is 'waiting'. Showing waiting popup.");
                         const waitingDetails = { winner: null, reason: 'waiting' };
                         setGameEndDetails(waitingDetails);
                         setShowGameEndPopup(true);
-                    } else if (data.status === 'archiving' || data.status === 'archived'){
-                        console.log(`useGameState: Status is '${data.status}'. No change to popup visibility.`);
+                    } else if (data.status === 'archiving' || data.status === 'archived') {
                     }
 
                 } catch (error) {
@@ -57,7 +53,6 @@ export const useGameState = (
             } else {
                 setGameState(null);
                 setGame(new PortalChess());
-                console.log("useGameState: Game data is null, resetting state.");
                 setShowGameEndPopup(false);
                 setGameEndDetails(null);
             }
@@ -67,4 +62,4 @@ export const useGameState = (
     }, [gameId, setGameEndDetails, setShowGameEndPopup]);
 
     return { game, setGame, gameState, setGameState };
-}; 
+};
