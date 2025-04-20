@@ -374,6 +374,15 @@ const PortalChessGame = () => {
                     via: validMove.via,
                     portal: true
                 });
+            } else if (validMove.simulPortalMove) {
+                // Add handling for simultaneous portal moves
+                move = newGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    simulPortalMove: true,
+                    simulFrom: validMove.simulFrom,
+                    originalFrom: sourceSquare
+                });
             } else {
                 move = newGame.move({
                     from: sourceSquare,
