@@ -1,23 +1,49 @@
-import { useState , useContext, useEffect} from 'react';
+import { useState, useContext, useEffect } from 'react';
+import { motion } from 'framer-motion'; // Import motion
+import { BiUserCircle, BiStats, BiTimeFive, BiStar, BiGame } from 'react-icons/bi'; // Import icons
 import GameSetup from './GameSetup';
 import Friends from './Friends';
 import MatchHistory from './MatchHistory';
 import AuthContext from "../../contexts/AuthContext.jsx";
-import {BACKEND_URL} from "../../config.js";
+import { BACKEND_URL } from "../../config.js";
+
+// Animation Variants (similar to LandingPage)
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.6 } }
+};
+
+const slideUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 1 }, // Start visible to avoid layout shift
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      delayChildren: 0.1
+    }
+  }
+};
+
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
+  
   console.log(user.stsTokenManager.accessToken);
   console.log(user.uid);
   const [userProfile, setUserProfile] = useState({
-    username: '',
-    email: '',
+    username: 'Loading...', // Default placeholder
+    email: 'Loading...',    // Default placeholder
     games_played: 0,
     created_at: '',
-    display_name: '',
+    display_name: 'Loading...', // Default placeholder
     draws: 0,
     losses: 0,
-    rating: 0,
+    rating: 0, // Added rating here
     uid: '',
     wins: 0,
   });
@@ -59,9 +85,21 @@ const ProfilePage = () => {
             setUserProfile(data);
           } else {
             console.error('Failed to fetch user profile:', profileResponse.status);
+            setUserProfile(prev => ({ // Set error state or defaults
+              ...prev,
+              username: 'Error',
+              email: 'Could not load profile',
+              display_name: 'Error'
+            }));
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          setUserProfile(prev => ({ // Set error state or defaults
+            ...prev,
+            username: 'Error',
+            email: 'Could not load profile',
+            display_name: 'Error'
+          }));
         }
       }
     };
@@ -69,81 +107,127 @@ const ProfilePage = () => {
     fetchUserProfile();
   }, [user]);
 
-  console.log(userProfile); // Log the fetched profile
-  // const [userProfile] = useState({
-  //   username: 'ChessMaster99',
-  //   email: 'chessmaster@example.com',
-  //   gamesPlayed: 127,
-  //   winRate: '58%',
-  //   memberSince: '2092-1-12'
-  // });
 
-  const [activeSection, setActiveSection] = useState('friends'); // Default to "friends"
+  const [activeSection, setActiveSection] = useState('friends');
 
   return (
-    <div className="container mx-auto px-4 py-10 bg-gray-300 min-h-screen flex flex-col md:flex-row gap-8 text-white">
-      {/* Left Column - User Profile, Friends & Match History */}
-      <div className="md:w-2/5 space-y-6">
+    // Updated background to match LandingPage gradient style
 
-        {/* User Profile Header */}
-        <div className="bg-gray-800 rounded-xl p-8 shadow-lg border border-indigo-500 backdrop-blur-lg">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-full flex items-center justify-center text-3xl font-extrabold shadow-lg">
-              {userProfile.username.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-indigo-400 tracking-wide">{userProfile.username}</h1>
-              <p className="text-gray-400 text-sm">{userProfile.email}</p>
-              <div className="mt-4 space-y-1 text-gray-300">
-                <div className="text-lg"><span className="font-semibold text-indigo-400">Games Played:</span> {userProfile.games_played}</div>
-                <div className="text-lg">
-                  <span className="font-semibold text-indigo-400">Win Rate:</span>{' '}
-                  {userProfile.games_played > 0
-                    ? `${((userProfile.wins / userProfile.games_played) * 100).toFixed(1)}%`
-                    : 'NA'}
-                </div>
-                <div className="text-lg"><span className="font-semibold text-indigo-400">Member Since:</span> {new Date(userProfile.created_at).toLocaleDateString()}</div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500/70 to-blue-700/70 text-gray-800 py-12 px-4 sm:px-6 lg:px-8 relative">
+      {/* Add chess pattern background similar to LandingPage */}
+      <div className="absolute inset-0 bg-[url('/chess-pattern.png')] opacity-5 bg-repeat" style={{ backgroundSize: '200px' }}></div>
+
+      <motion.div
+        className="container mx-auto max-w-7xl flex flex-col lg:flex-row gap-8 relative z-10"
+        initial="hidden"
+        animate="visible"
+        variants={staggerContainer}
+      >
+        {/* Left Column */}
+        <motion.div className="lg:w-2/5 space-y-8" variants={fadeIn}>
+
+          {/* User Profile Header - Updated with glassmorphism styling */}
+          <motion.div
+            className="bg-indigo-100 backdrop-blur-md rounded-xl p-6 shadow-lg border border-white/30 overflow-hidden"
+            variants={slideUp}
+          >
+            <div className="flex items-center gap-5">
+              <motion.div
+                className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-blue-500 text-white rounded-full flex items-center justify-center text-4xl font-bold shadow-lg border-2 border-white/50 flex-shrink-0"
+                whileHover={{ scale: 1.05 }}
+              >
+                {userProfile.username && userProfile.username !== 'Loading...' && userProfile.username !== 'Error'
+                  ? userProfile.username.charAt(0).toUpperCase()
+                  : <BiUserCircle />}
+              </motion.div>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl font-semibold text-indigo-700 truncate" title={userProfile.display_name || userProfile.username}>
+                  {userProfile.display_name || userProfile.username}
+                </h1>
+                <p className="text-gray-600 text-sm truncate" title={userProfile.email}>{userProfile.email}</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Toggle Buttons for Friends & Match History */}
-        <div>
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setActiveSection('friends')}
-              className={`w-1/2 px-6 py-3 text-center font-medium rounded-t-lg transition-all duration-300
-              ${activeSection === 'friends'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-gray-700 text-gray-300 hover:bg-indigo-500 hover:text-white'}`}
+            {/* Stats Section - Updated styling */}
+            <motion.div
+              className="mt-6 grid grid-cols-2 gap-4 text-sm"
+              variants={staggerContainer}
             >
-              Friends
-            </button>
-            <button
-              onClick={() => setActiveSection('matchHistory')}
-              className={`w-1/2 px-6 py-3 text-center font-medium rounded-t-lg transition-all duration-300
-              ${activeSection === 'matchHistory'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-gray-700 text-gray-300 hover:bg-indigo-500 hover:text-white'}`}
-            >
-              Match History
-            </button>
-          </div>
+              <motion.div className="flex items-center space-x-2 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm" variants={slideUp}>
+                <BiStar className="text-yellow-500 text-lg flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-gray-600 block">Rating</span>
+                  <span className="text-lg font-semibold text-gray-800">{userProfile.rating}</span>
+                </div>
+              </motion.div>
+              <motion.div className="flex items-center space-x-2 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm" variants={slideUp}>
+                <BiGame className="text-green-500 text-lg flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-gray-600 block">Played</span>
+                  <span className="text-lg font-semibold text-gray-800">{userProfile.games_played}</span>
+                </div>
+              </motion.div>
+              <motion.div className="flex items-center space-x-2 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm" variants={slideUp}>
+                <BiStats className="text-blue-500 text-lg flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-gray-600 block">Win Rate</span>
+                  <span className="text-lg font-semibold text-gray-800">
+                    {userProfile.games_played > 0
+                      ? `${((userProfile.wins / userProfile.games_played) * 100).toFixed(1)}%`
+                      : 'N/A'}
+                  </span>
+                </div>
+              </motion.div>
+              <motion.div className="flex items-center space-x-2 p-3 bg-white/50 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm" variants={slideUp}>
+                <BiTimeFive className="text-purple-500 text-lg flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-gray-600 block">Member Since</span>
+                  <span className="text-lg font-semibold text-gray-800">
+                    {userProfile.created_at ? new Date(userProfile.created_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
 
-          {/* Expanded Content with Scrollable Section */}
-          <div className="rounded-b-xl shadow-lg overflow-hidden ">
-            <div className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-500 scrollbar-track-gray-700">
+          {/* Toggle Buttons & Content Area - Updated styling */}
+          <motion.div variants={slideUp}>
+            <div className="flex bg-indigo-100 backdrop-blur-sm rounded-t-xl">
+              {['friends', 'matchHistory'].map((section) => (
+                <motion.button
+                  key={section}
+                  onClick={() => setActiveSection(section)}
+                  className={`flex-1 px-4 py-3 text-center font-medium transition-colors duration-300 focus:outline-none relative ${activeSection === section
+                    ? 'text-indigo-600' // Active color
+                    : 'text-gray-600 hover:text-indigo-500' // Inactive/hover color
+                    }`}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {section === 'friends' ? 'Friends' : 'Match History'}
+                  {activeSection === section && (
+                    <motion.div
+                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500"
+                      layoutId="underline"
+                    />
+                  )}
+                </motion.button>
+              ))}
+            </div>
+
+            {/* Content Area - Updated styling */}
+            <div className="rounded-b-xl shadow-lg overflow-hidden min-h-[400px]">
               {activeSection === 'friends' && <Friends />}
               {activeSection === 'matchHistory' && <MatchHistory />}
             </div>
+          </motion.div>
+        </motion.div>
+
+        {/* Right Column - Game Setup - Updated styling */}
+        <motion.div className="lg:w-3/5" variants={fadeIn}>
+          <div className="bg-indigo-100 backdrop-blur-md rounded-xl shadow-lg border border-white/30 h-full">
+            <GameSetup />
           </div>
-        </div>
-      </div>
-      {/* Right Column - Game Setup Expands Entire Right Side */}
-      <div className="md:w-3/5">
-        <GameSetup />
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };

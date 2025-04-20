@@ -6,7 +6,6 @@ export class PortalChess extends Chess {
     this.portals = {};
     this.portalMoves = 0;
     this.maxPortals = maxPortals;
-
     this.color_hashes = ['#FF5733', '#33A1FF', '#28A745', '#FFC107', '#8E44AD'];
   }
 
@@ -91,8 +90,85 @@ export class PortalChess extends Chess {
       );
     });
 
-    const unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
+    let unblockedMoves = standardMoves.filter(move => !blockedMoves.includes(move));
 
+    // Filter out standard moves that target portal squares with same-color pieces
+    // or straight pawn moves to portals with opposite-color pieces on exit
+    unblockedMoves = unblockedMoves.filter(move => {
+      const to = typeof move === 'string' ? move.slice(2, 4) : move.to;
+      const from = typeof move === 'string' ? move.slice(0, 2) : move.from;
+
+      // Skip if the target isn't a portal square
+      if (!this.portals[to]) return true;
+
+      const portalExit = this.portals[to].linkedTo;
+      const pieceOnPortalExit = this.get(portalExit);
+      const movingPiece = this.get(from);
+
+      // Block move if a same-color piece is on the other end of the portal
+      if (pieceOnPortalExit && pieceOnPortalExit.color === movingPiece.color) {
+        return false;
+      }
+
+      // Special case for pawns: Block straight moves to portals with opposite-color pieces
+      if (movingPiece.type === 'p' && pieceOnPortalExit && pieceOnPortalExit.color !== movingPiece.color) {
+        // Check if this is a straight move (same file/column)
+        if (from.charAt(0) === to.charAt(0)) {
+          // This is a straight pawn move to a portal with opposite piece on exit
+          // Block this move
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // Special case: Add diagonal pawn captures through portals
+    if (piece && piece.type === 'p') {
+      // Calculate diagonal capture squares for pawns
+      const file = square.charCodeAt(0) - 97;  // 'a' is 97 in ASCII
+      const rank = parseInt(square[1]) - 1;    // Convert to 0-indexed
+
+      // Direction of pawn movement (1 for white, -1 for black)
+      const direction = piece.color === 'w' ? 1 : -1;
+
+      // Check both diagonal squares
+      [-1, 1].forEach(lateral => {
+        const captureFile = file + lateral;
+        const captureRank = rank + direction;
+
+        // Check if coordinates are valid
+        if (captureFile >= 0 && captureFile < 8 && captureRank >= 0 && captureRank < 8) {
+          const diagonalSquare = String.fromCharCode(97 + captureFile) + (captureRank + 1);
+
+          // Check if there's a portal on the diagonal square
+          if (this.portals[diagonalSquare]) {
+            const portalExit = this.portals[diagonalSquare].linkedTo;
+            const pieceOnExit = this.get(portalExit);
+
+            // If there's an opposite-colored piece on the portal exit, add a capture move
+            if (pieceOnExit && pieceOnExit.color !== piece.color) {
+              portalMoves.push({
+                color: piece.color,
+                from: square,
+                to: portalExit,
+                piece: piece.type,
+                via: diagonalSquare,
+                portal: true,
+                flags: 'p', // portal capture
+                san: `P${diagonalSquare}-${portalExit}`,
+                captured: pieceOnExit.type,
+                lan: `${square}${portalExit}`,
+                after: this.fen(),
+                before: this.fen()
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // Continue with existing portal traversal logic
     Object.entries(this.portals).forEach(([portalSquare, portal]) => {
       if (visited.portals.has(portalSquare)) return;
 
@@ -102,6 +178,17 @@ export class PortalChess extends Chess {
       if (piece.type === 'p') {
         const startRank = piece.color === 'w' ? '2' : '7';
         if (square[1] !== startRank) return;
+      }
+
+      // Check if there's a piece of same color on either portal square
+      const portalExit = portal.linkedTo;
+      const pieceOnPortalEntry = this.get(portalSquare);
+      const pieceOnPortalExit = this.get(portalExit);
+
+      // Skip this portal if either portal square has a piece of the same color
+      if ((pieceOnPortalEntry && pieceOnPortalEntry.color === piece.color) ||
+        (pieceOnPortalExit && pieceOnPortalExit.color === piece.color)) {
+        return;
       }
 
       visited.portals.add(portalSquare);
@@ -117,7 +204,6 @@ export class PortalChess extends Chess {
 
         const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
         const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
-
 
         // Check if there's a piece on the portal exit
         const pieceOnPortalExit = this.get(portalExit);
@@ -147,7 +233,6 @@ export class PortalChess extends Chess {
         }
 
         // Normal portal traversal logic continues if no piece on portal exit
-
         const originalPiece = this.remove(square);
         this.put(originalPiece, portalExit);
 
@@ -246,7 +331,6 @@ export class PortalChess extends Chess {
   }
 
   placePair(square1, square2) {
-
     // Verify that neither square is occupied
     if (this.get(square1) || this.get(square2)) {
       throw new Error("Cannot place portal on an occupied square");
@@ -278,7 +362,6 @@ export class PortalChess extends Chess {
       portalSquaresToRemove.forEach(square => {
         delete this.portals[square];
       });
-
     }
 
     // Find highest existing portal ID
@@ -318,7 +401,6 @@ export class PortalChess extends Chess {
           this.isDraw() ? 'draw' : null
     };
   }
-
 
   isCheckmate() {
     return super.isCheckmate();
