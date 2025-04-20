@@ -19,7 +19,7 @@ function AvailableGamesComponent({ availableGames, joinGame, backToSetup }) {
                     {game.white_player_email || game.black_player_email || 'Open Game'}
                   </span>
                   <div className="text-xs text-gray-500">
-                    Time: {game.time_control || 5} min | Portals: {game.portal_count || 2}
+                    Time: {game.time_control} min | Portals: {game.portal_count}
                   </div>
                 </div>
                 <button

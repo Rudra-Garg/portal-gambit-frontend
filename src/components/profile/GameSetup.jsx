@@ -85,9 +85,8 @@ const GameSetup = () => {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            navigate('/login');
+            navigate('/');
         } catch (error) {
-            console.error('Error logging out:', error);
         }
     };
 
@@ -270,11 +269,11 @@ const GameSetup = () => {
                 if (bothPlayersLeaving) {
                     // Delete the game if both players have left
                     await remove(ref(database, `games/${activeGame}`));
-                    console.log('Game deleted as both players have left');
+                    // console.log('Game deleted as both players have left');
                 } else {
                     // Update the game with the player removed
                     await update(ref(database, `games/${activeGame}`), updateData);
-                    console.log('Player removed from game');
+                    // console.log('Player removed from game');
                 }
 
                 setActiveGame(null);
@@ -349,8 +348,8 @@ const GameSetup = () => {
 
                         <div>
                             <label className="block font-medium text-indigo-700 mb-3">Number of Portals</label>
-                            <div className="grid grid-cols-3 gap-2">
-                                {[2, 3, 4].map(num => (
+                            <div className="grid grid-cols-5 gap-2">
+                                {[0, 1, 2, 3, 4].map(num => (
                                     <button
                                         key={num}
                                         className={`py-2 rounded-lg transition-all duration-200 ${portalCount === num
@@ -376,7 +375,7 @@ const GameSetup = () => {
                             <button
                                 onClick={findGames}
                                 disabled={isLoading}
-                                className="py-3 bg-indigo-800 text-white font-bold rounded-lg hover:bg-indigo-900 transition-colors shadow-md disabled:opacity-50"
+                                className="py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-900 transition-colors shadow-md disabled:opacity-50"
                             >
                                 Find Games
                             </button>

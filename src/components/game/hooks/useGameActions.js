@@ -36,11 +36,10 @@ export const useGameActions = (
         if (!areBothPlayersJoined || !areBothPlayersJoined()) return false;
         if (!isMyTurn || !isMyTurn()) return false;
         if (gameState?.status === 'archived' || gameState?.status === 'archiving' || isGameArchived) {
-            console.log('Game is archived or archiving, moves disabled');
             return false;
         }
         if (isArchivingLocally) {
-            console.log('Local archiving in progress, moves disabled');
+
             return false;
         }
 
@@ -129,7 +128,6 @@ export const useGameActions = (
 
                 const gameStatus = newGame.isGameOver();
                 if (gameStatus.over) {
-                    console.log("Game over detected by move:", gameStatus.reason);
                     const gameDetails = {
                         winner: gameStatus.winner,
                         reason: gameStatus.reason
@@ -152,20 +150,17 @@ export const useGameActions = (
                         };
                     }).then(async (transactionResult) => {
                         if (transactionResult.committed) {
-                            console.log("Move resulted in game end. Set status to finished.");
+
                             setGameEndDetails(gameDetails);
                             setShowGameEndPopup(true);
                             push(movesRef, moveDataWithTimestamp).then(() => {
                                 initiateArchiving(currentDataForArchive, gameDetails);
                             }).catch(error => {
-                                console.error("Error pushing final move to history before archiving:", error);
+
                                 initiateArchiving(currentDataForArchive, gameDetails);
                             });
-                        } else {
-                            console.log("Move game end transaction aborted (already ended?).");
                         }
                     }).catch(error => {
-                        console.error("Error during move game end transaction:", error);
                     });
 
                 } else {
@@ -173,14 +168,13 @@ export const useGameActions = (
                         update(ref(database, `games/${gameId}`), updatesForFirebase),
                         push(movesRef, moveDataWithTimestamp)
                     ]).catch(error => {
-                        console.error("Error updating game state or pushing move to history:", error);
+
                     });
                 }
                 return true;
             }
             return false;
         } catch (error) {
-            console.error('Error making move:', error);
             return false;
         }
     }, [
@@ -192,7 +186,6 @@ export const useGameActions = (
 
     const handleSquareClick = useCallback((square) => {
         if (gameState?.status === 'archived' || gameState?.status === 'archiving' || isGameArchived || isArchivingLocally) {
-            console.log('Game is archived or archiving, clicks disabled');
             return;
         }
 
@@ -208,7 +201,7 @@ export const useGameActions = (
             }
         } else {
             if (!isMyTurn || !isMyTurn()) {
-                console.log('Not your turn to place a portal');
+
                 return;
             }
             if (!portalStart) {
@@ -280,7 +273,6 @@ export const useGameActions = (
                     setPortalStart(null);
                     setPortalMode(false);
                 } catch (error) {
-                    console.error('Portal placement error:', error);
                     alert(`Portal placement failed: ${error.message || `Maximum number of portals (${gameState?.portal_count}) reached!`}`);
                     setPortalStart(null);
                     setPortalMode(false);

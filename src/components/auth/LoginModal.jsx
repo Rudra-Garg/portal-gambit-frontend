@@ -4,7 +4,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, sendEm
 import { auth } from '../../firebase/config';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
-import {BACKEND_URL} from '../../config';
+import { BACKEND_URL } from '../../config';
 
 const LoginModal = ({ onClose, onSwitchToSignup }) => {
     const [email, setEmail] = useState('');
@@ -48,7 +48,6 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
                 throw new Error('Failed to check profile');
             }
         } catch (error) {
-            console.error('Profile check/create error:', error);
             throw new Error('Failed to setup user profile');
         }
     };
@@ -66,7 +65,7 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
                     firebase_token: firebaseToken,
                 })
             });
-         
+
             if (!response.ok) {
                 const errorData = await response.json();
                 if (errorData.detail?.includes('Token used too early')) {
@@ -82,26 +81,22 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             }
             return data;
         } catch (error) {
-            console.error('Backend token exchange error:', error);
             throw error;
         }
     };
 
     const saveAuthToken = async (user) => {
         try {
-            console.log('Getting Firebase token...');
             const firebaseToken = await user.getIdToken(/* forceRefresh */ true);
-            
-            console.log('Exchanging token with backend...');
+
             const backendTokens = await exchangeTokenWithBackend(firebaseToken);
-    
+
             // Store tokens only after successful exchange
             localStorage.setItem('access_token', backendTokens.access_token);
             localStorage.setItem('token_type', backendTokens.token_type);
             localStorage.setItem('userId', user.uid);
             localStorage.setItem('userEmail', user.email);
         } catch (error) {
-            console.error('Error saving auth tokens:', error);
             throw new Error('Failed to complete authentication process');
         }
     };
@@ -114,7 +109,6 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
 
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // console.log(userCredential);
             const user = userCredential.user;
 
             if (!user.emailVerified) {
@@ -125,13 +119,11 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             }
 
             const userId = user.uid;
-            console.log('User ID:', userId);
             await saveAuthToken(userCredential.user);
             await checkAndCreateProfile(user);
             onClose();
             navigate(`/profile`);
         } catch (error) {
-            console.log(error);
             if (error.code === 'auth/too-many-requests') {
                 setError('Too many failed login attempts. Please try again later.');
             } else if (error.message.includes('Backend authentication failed')) {
@@ -164,7 +156,6 @@ const LoginModal = ({ onClose, onSwitchToSignup }) => {
             onClose();
             navigate(`/profile`);
         } catch (error) {
-            console.error('Google sign in error:', error);
             setError(error.message.includes('Failed to setup user profile')
                 ? 'Failed to setup user profile. Please try again.'
                 : 'Failed to sign in with Google');

@@ -10,7 +10,7 @@ export class PortalChess extends Chess {
   }
 
   moves({ square, verbose, visited } = {}) {
-    console.log("portal list:", this.portals);
+    // console.log("portal list:", this.portals);
 
     // Enhanced visited state
     if (!visited) {
@@ -346,37 +346,7 @@ export class PortalChess extends Chess {
   }
 
   move(moveObj) {
-    // Handle simultaneous portal moves
-    if (moveObj.simulPortalMove) {
-      const piece = this.get(moveObj.originalFrom || moveObj.from);
-      if (!piece) return null;
 
-      // Execute the move directly from original position
-      this.remove(moveObj.originalFrom || moveObj.from);
-
-      // Handle potential capture at target square
-      const targetPiece = this.get(moveObj.to);
-      if (targetPiece) {
-        this.remove(moveObj.to);
-      }
-
-      // Complete the move
-      this.put(piece, moveObj.to);
-      this._turn = this._turn === 'w' ? 'b' : 'w';
-
-      // Return move data with the special flags
-      return {
-        color: piece.color,
-        from: moveObj.originalFrom || moveObj.from,
-        to: moveObj.to,
-        simulFrom: moveObj.simulFrom,
-        piece: piece.type,
-        simulPortalMove: true,
-        captured: targetPiece?.type || null
-      };
-    }
-    // Handle regular portal moves and standard moves with existing code
-    console.log("trying to move: ", moveObj)
     if (moveObj.portal) {
       const piece = this.get(moveObj.from);
       if (!piece) return null;

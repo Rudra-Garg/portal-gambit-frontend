@@ -171,7 +171,7 @@ const Friends = () => {
           throw new Error('No access token found');
         }
 
-        console.log("friend access token", accessToken);
+        // console.log("friend access token", accessToken);
         const response = await fetch(`${BACKEND_URL}/friends/list`, {
           method: 'GET',
           headers: {
