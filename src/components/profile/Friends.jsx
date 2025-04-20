@@ -591,12 +591,12 @@ const Friends = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2">
-                  <button
+                  {/*<button
                     onClick={() => inviteToGame(friend.name)}
                     className="px-3 py-1 bg-indigo-600 text-white text-xs font-medium rounded-md hover:bg-indigo-700 transition-colors"
                   >
                     Invite
-                  </button>
+                  </button>*/}
                   <button
                     onClick={() => removeFriend(friend.id)}
                     className="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md hover:bg-red-600 transition-colors"
