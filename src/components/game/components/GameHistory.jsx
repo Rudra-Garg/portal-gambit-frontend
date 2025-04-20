@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit }) => {
+const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit, portalCount }) => {
   const getMoveDisplay = useCallback((move) => {
     if (!move) return '';
 
@@ -26,7 +26,7 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
           <button
             onClick={() => setPortalMode(!portalMode)}
             className={`bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center ${portalMode ? 'ring-2 ring-blue-300' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
-            disabled={!isMyTurn()}
+            disabled={!isMyTurn() || portalCount === 0}
           >
             {portalMode ? 'Cancel Portal' : 'Place Portal'}
           </button>
@@ -132,7 +132,8 @@ GameHistory.propTypes = {
   portalMode: PropTypes.bool.isRequired,
   setPortalMode: PropTypes.func.isRequired,
   isMyTurn: PropTypes.func.isRequired,
-  exit: PropTypes.func.isRequired
+  exit: PropTypes.func.isRequired,
+  portalCount: PropTypes.number.isRequired
 };
 
 export default GameHistory;
