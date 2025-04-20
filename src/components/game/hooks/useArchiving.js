@@ -13,26 +13,22 @@ export const useArchiving = (gameId) => {
     // Central function to initiate the archive process
     const initiateArchiving = useCallback(async (gameDataForArchive, gameDetails) => {
         if (!gameId || !gameDataForArchive || !gameDetails) {
-            console.error("Initiate Archiving: Missing required data.");
             return;
         }
 
         // Avoid starting if already archiving locally or game is known to be archived
         if (isArchivingLocally || isGameArchived) {
-            console.log("Initiate Archiving: Already archiving locally or game is archived.");
             return;
         }
 
         // Double-check player data before proceeding
         if (!gameDataForArchive.white_player || !gameDataForArchive.black_player) {
-            console.error("Initiate Archiving: Cannot archive game, missing player information.");
             return;
         }
 
         const gameRef = ref(database, `games/${gameId}`);
         const gameStatusRef = ref(database, `games/${gameId}/status`);
 
-        console.log(`Initiate Archiving: Attempting transaction to set status to 'archiving' for game ${gameId}`);
         setIsArchivingLocally(true); // Indicate local attempt
 
         try {
@@ -45,8 +41,6 @@ export const useArchiving = (gameId) => {
             });
 
             if (transactionResult.committed) {
-                console.log(`Initiate Archiving: Successfully set status to 'archiving' for game ${gameId}.`);
-
                 const uniqueArchiveId = uuidv4();
 
                 try {
@@ -73,8 +67,8 @@ export const useArchiving = (gameId) => {
                             end_time: new Date().toISOString(),
                             result: gameDetails.winner === 'white' ? 'white_win' :
                                 gameDetails.winner === 'black' ? 'black_win' :
-                                gameDetails.winner === 'draw' ? 'draw' :
-                                gameDetails.reason === 'abandoned' ? 'abandoned' : 'unknown', // Handle abandon explicitly
+                                    gameDetails.winner === 'draw' ? 'draw' :
+                                        gameDetails.reason === 'abandoned' ? 'abandoned' : 'unknown', // Handle abandon explicitly
                             winner_id: gameDetails.winner === 'white' ? gameDataForArchive.white_player :
                                 gameDetails.winner === 'black' ? gameDataForArchive.black_player : null,
                             moves: formattedMoves,
@@ -96,11 +90,9 @@ export const useArchiving = (gameId) => {
 
                     if (!response.ok) {
                         const errorData = await response.json();
-                        console.error('API error during archive:', errorData);
                         throw new Error(`Failed to archive game via API: ${response.status} ${response.statusText}`);
                     }
 
-                    console.log(`Initiate Archiving: API call successful for game ${gameId}. Updating status to 'archived'.`);
                     await update(gameRef, {
                         status: 'archived',
                         archived_at: Date.now(),
@@ -109,25 +101,21 @@ export const useArchiving = (gameId) => {
                     setIsGameArchived(true);
 
                 } catch (apiError) {
-                    console.error(`Initiate Archiving: Error during API archive call for game ${gameId}:`, apiError);
                 } finally {
                     setIsArchivingLocally(false);
                 }
 
             } else {
                 // Transaction failed - likely already archiving or archived by another client
-                console.log(`Initiate Archiving: Transaction failed for game ${gameId}. Status not 'finished' or already claimed.`);
-                // Check the current status to update local state if needed
                 const snapshot = await get(gameRef);
                 const currentData = snapshot.val();
                 if (currentData?.status === 'archived' || currentData?.archive_id) {
-                     setIsGameArchived(true); // Sync local state
+                    setIsGameArchived(true); // Sync local state
                 }
                 setIsArchivingLocally(false);
             }
         } catch (error) {
-             console.error(`Initiate Archiving: Error during transaction for game ${gameId}:`, error);
-             setIsArchivingLocally(false); // Release local lock on error
+            setIsArchivingLocally(false); // Release local lock on error
         }
 
     }, [gameId, isArchivingLocally, isGameArchived]);
@@ -142,13 +130,11 @@ export const useArchiving = (gameId) => {
         const unsubStatus = onValue(statusRef, (snapshot) => {
             const status = snapshot.val();
             if (status === 'archived') {
-                console.log("useArchiving: Detected status 'archived'. Setting isGameArchived = true.");
                 setIsGameArchived(true);
                 setIsArchivingLocally(false); // Stop local attempts if archived elsewhere
             } else {
                 // If status is not 'archived' (e.g., active, finished, waiting, archiving)
                 // Ensure local archived state is false
-                 console.log(`useArchiving: Detected status '${status}'. Setting isGameArchived = false.`);
                 setIsGameArchived(false);
             }
         });
@@ -156,14 +142,12 @@ export const useArchiving = (gameId) => {
         // Listener for archive_id changes (redundant but safe)
         const unsubArchiveId = onValue(archiveIdRef, (snapshot) => {
             if (snapshot.exists()) {
-                 console.log("useArchiving: Detected archive_id exists. Setting isGameArchived = true.");
                 setIsGameArchived(true);
-                 setIsArchivingLocally(false);
+                setIsArchivingLocally(false);
             } else {
-                 // If archive_id is removed (e.g., during rematch)
-                 // Ensure local archived state is false
-                 console.log("useArchiving: Detected archive_id does not exist. Setting isGameArchived = false.");
-                 setIsGameArchived(false);
+                // If archive_id is removed (e.g., during rematch)
+                // Ensure local archived state is false
+                setIsGameArchived(false);
             }
         });
 
@@ -175,4 +159,4 @@ export const useArchiving = (gameId) => {
 
 
     return { initiateArchiving, isArchivingLocally, isGameArchived };
-}; 
+};

@@ -109,7 +109,6 @@ const MatchHistory = () => {
         setMatches(formattedMatches);
         setError(null);
       } catch (err) {
-        console.error('Error fetching match history:', err);
         setError('Failed to load match history. Please try again later.');
       } finally {
         setLoading(false);
@@ -157,8 +156,8 @@ const MatchHistory = () => {
           <button
             key={option}
             className={`px-4 py-2 rounded-lg transition-colors ${filter === option
-                ? 'bg-gray-800 text-white font-medium'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-gray-800 text-white font-medium'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             onClick={() => setFilter(option)}
           >

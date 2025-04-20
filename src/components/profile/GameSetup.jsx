@@ -87,7 +87,6 @@ const GameSetup = () => {
             await signOut(auth);
             navigate('/login');
         } catch (error) {
-            console.error('Error logging out:', error);
         }
     };
 

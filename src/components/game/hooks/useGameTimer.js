@@ -21,7 +21,6 @@ export const useGameTimer = (
 
         // Skip timer if archived or archiving is in progress by any client (based on status)
         if (gameState.status === 'archived' || gameState.status === 'archiving' || isGameArchived) {
-            console.log('Game is archived or archiving, timer disabled');
             return;
         }
 
@@ -51,7 +50,6 @@ export const useGameTimer = (
 
                     if (newWhiteTime <= 0 && gameState.whiteTime > 0) {
                         clearInterval(timerInterval);
-                        console.log("White timeout detected.");
                         const gameDetails = { winner: 'black', reason: 'timeout' };
                         const gameRef = ref(database, `games/${gameId}`);
                         const currentDataForArchive = { ...gameState, whiteTime: 0 };
@@ -68,32 +66,28 @@ export const useGameTimer = (
                             };
                         }).then(async (transactionResult) => {
                             if (transactionResult.committed) {
-                                console.log("Timeout: Set status to finished.");
                                 // Update UI
                                 setGameEndDetails(gameDetails);
                                 setShowGameEndPopup(true);
                                 // 2. Initiate Archiving
                                 initiateArchiving(currentDataForArchive, gameDetails);
-                            } else {
-                                console.log("Timeout: Failed to set status to finished (already ended?).");
                             }
-                        }).catch(error => console.error("Error during white timeout transaction:", error));
+                        }).catch(error => { });
                     }
-                // --- Black's Turn --- 
+                    // --- Black's Turn --- 
                 } else {
                     const newBlackTime = Math.max(0, gameState.blackTime - elapsedSeconds);
                     setBlackTime(newBlackTime);
 
                     if (newBlackTime <= 0 && gameState.blackTime > 0) {
                         clearInterval(timerInterval);
-                        console.log("Black timeout detected.");
                         const gameDetails = { winner: 'white', reason: 'timeout' };
                         const gameRef = ref(database, `games/${gameId}`);
                         const currentDataForArchive = { ...gameState, blackTime: 0 };
 
                         // 1. Attempt to set status to finished
                         runTransaction(gameRef, (currentData) => {
-                             if (!currentData || currentData.status !== 'active') return undefined; // Abort if not active
+                            if (!currentData || currentData.status !== 'active') return undefined; // Abort if not active
                             return {
                                 ...currentData,
                                 status: 'finished',
@@ -103,16 +97,13 @@ export const useGameTimer = (
                             };
                         }).then(async (transactionResult) => {
                             if (transactionResult.committed) {
-                                console.log("Timeout: Set status to finished.");
                                 // Update UI
                                 setGameEndDetails(gameDetails);
                                 setShowGameEndPopup(true);
                                 // 2. Initiate Archiving
                                 initiateArchiving(currentDataForArchive, gameDetails);
-                            } else {
-                                console.log("Timeout: Failed to set status to finished (already ended?).");
                             }
-                        }).catch(error => console.error("Error during black timeout transaction:", error));
+                        }).catch(error => { });
                     }
                 }
             }, 1000);
@@ -136,4 +127,4 @@ export const useGameTimer = (
     ]);
 
     return { whiteTime, blackTime, setWhiteTime, setBlackTime };
-}; 
+};
