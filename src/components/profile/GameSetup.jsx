@@ -375,7 +375,7 @@ const GameSetup = () => {
                             <button
                                 onClick={findGames}
                                 disabled={isLoading}
-                                className="py-3 bg-indigo-800 text-white font-bold rounded-lg hover:bg-indigo-900 transition-colors shadow-md disabled:opacity-50"
+                                className="py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-900 transition-colors shadow-md disabled:opacity-50"
                             >
                                 Find Games
                             </button>
