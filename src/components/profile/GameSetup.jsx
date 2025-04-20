@@ -269,11 +269,11 @@ const GameSetup = () => {
                 if (bothPlayersLeaving) {
                     // Delete the game if both players have left
                     await remove(ref(database, `games/${activeGame}`));
-                    console.log('Game deleted as both players have left');
+                    // console.log('Game deleted as both players have left');
                 } else {
                     // Update the game with the player removed
                     await update(ref(database, `games/${activeGame}`), updateData);
-                    console.log('Player removed from game');
+                    // console.log('Player removed from game');
                 }
 
                 setActiveGame(null);

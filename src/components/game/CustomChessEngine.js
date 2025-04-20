@@ -10,7 +10,7 @@ export class PortalChess extends Chess {
   }
 
   moves({ square, verbose, visited } = {}) {
-    console.log("portal list:", this.portals);
+    // console.log("portal list:", this.portals);
 
     // Enhanced visited state
     if (!visited) {
@@ -299,7 +299,7 @@ export class PortalChess extends Chess {
   }
 
   move(moveObj) {
-    console.log("trying to move: ", moveObj)
+    // console.log("trying to move: ", moveObj)
     if (moveObj.portal) {
       const piece = this.get(moveObj.from);
       if (!piece) return null;

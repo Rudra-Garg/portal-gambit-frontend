@@ -32,9 +32,9 @@ const staggerContainer = {
 
 const ProfilePage = () => {
   const { user } = useContext(AuthContext);
-  
-  console.log(user.stsTokenManager.accessToken);
-  console.log(user.uid);
+
+  // console.log(user.stsTokenManager.accessToken);
+  // console.log(user.uid);
   const [userProfile, setUserProfile] = useState({
     username: 'Loading...', // Default placeholder
     email: 'Loading...',    // Default placeholder
