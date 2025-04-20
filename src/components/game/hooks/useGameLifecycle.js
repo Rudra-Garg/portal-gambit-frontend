@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { get, ref, remove, runTransaction } from 'firebase/database';
 import { database } from '../../../firebase/config';
+import { useNavigate } from 'react-router-dom';
+
+
 
 export const useGameLifecycle = (
     gameId,
@@ -13,16 +16,19 @@ export const useGameLifecycle = (
     isGameArchived,
     isArchivingLocally
 ) => {
+    const navigate = useNavigate();
     const exitGame = useCallback(async () => {
         if (!activeGame) {
-             setActiveGame(null);
-             return;
+            setActiveGame(null);
+            navigate('/profile');
+            return;
         }
 
         if (isGameArchived || isArchivingLocally) {
-             console.log('Exit Game: Game is archived or archiving locally, skipping exit logic.');
-             setActiveGame(null);
-             return;
+            console.log('Exit Game: Game is archived or archiving locally, skipping exit logic.');
+            setActiveGame(null);
+            navigate('/profile');
+            return;
         }
 
         try {
@@ -37,10 +43,10 @@ export const useGameLifecycle = (
             }
 
             if (gameData.status === 'archived' || gameData.status === 'archiving') {
-                 console.log('Exit Game: Game status in DB is archived/archiving, skipping logic.');
-                 setActiveGame(null);
-                 return;
-             }
+                console.log('Exit Game: Game status in DB is archived/archiving, skipping logic.');
+                setActiveGame(null);
+                return;
+            }
 
             if (gameData.status === 'active') {
                 const isWhiteLeaving = gameData.white_player === user.uid;
@@ -49,10 +55,10 @@ export const useGameLifecycle = (
                     reason: 'abandoned'
                 };
                 const currentDataForArchive = {
-                     ...gameData,
-                     winner: gameDetails.winner,
-                     reason: gameDetails.reason
-                 };
+                    ...gameData,
+                    winner: gameDetails.winner,
+                    reason: gameDetails.reason
+                };
 
                 const transactionResult = await runTransaction(gameRef, (currentData) => {
                     if (!currentData || currentData.status !== 'active') return undefined;
@@ -92,22 +98,24 @@ export const useGameLifecycle = (
                 return game;
             });
 
-             if (transactionResult.committed) {
+            if (transactionResult.committed) {
                 console.log('Exit Game: Player removed from non-active game.');
-                 const updatedGameSnapshot = await get(gameRef);
-                 const updatedGameData = updatedGameSnapshot.val();
-                 if (updatedGameData && !updatedGameData.white_player && !updatedGameData.black_player && updatedGameData.status !== 'archived' && updatedGameData.status !== 'archiving') {
-                     await remove(gameRef);
-                     console.log('Exit Game: Game deleted as both players have left.');
-                 }
-             } else {
-                 console.log('Exit Game: Failed to remove player (game deleted or status changed?).');
-             }
+                const updatedGameSnapshot = await get(gameRef);
+                const updatedGameData = updatedGameSnapshot.val();
+                if (updatedGameData && !updatedGameData.white_player && !updatedGameData.black_player && updatedGameData.status !== 'archived' && updatedGameData.status !== 'archiving') {
+                    await remove(gameRef);
+                    console.log('Exit Game: Game deleted as both players have left.');
+                }
+            } else {
+                console.log('Exit Game: Failed to remove player (game deleted or status changed?).');
+            }
             setActiveGame(null);
+            navigate('/profile');
 
         } catch (error) {
             console.error('Error exiting game:', error);
             setActiveGame(null);
+            navigate('/profile');
         }
 
     }, [
