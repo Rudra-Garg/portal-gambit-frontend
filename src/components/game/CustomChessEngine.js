@@ -10,8 +10,6 @@ export class PortalChess extends Chess {
   }
 
   moves({ square, verbose, visited } = {}) {
-    // console.log("portal list:", this.portals);
-
     // Enhanced visited state
     if (!visited) {
       visited = {
@@ -19,7 +17,8 @@ export class PortalChess extends Chess {
         portalChain: [],          // sequence of portals used
         blocks: new Set(),         // blocked squares
         moves: new Map(),          // accumulate moves across chain
-        simulChecked: new Set()    // NEW: track squares checked for simultaneous existence
+        simulChecked: new Set(),   // track squares checked for simultaneous existence
+        hasTraversedPortal: false  // NEW: flag to track if we've already gone through a portal
       };
     }
 
@@ -29,8 +28,14 @@ export class PortalChess extends Chess {
 
     if (!piece) return standardMoves;
 
+    // Check if this piece is on a portal - if so, it's already using portal capabilities
+    const isOnPortal = this.portals[square] !== undefined;
+
     // Handle piece on portal (simultaneous existence)
-    if (this.portals[square] && !visited.simulChecked.has(square)) {
+    if (isOnPortal && !visited.simulChecked.has(square)) {
+      // Mark that this piece has already traversed a portal
+      visited.hasTraversedPortal = true;
+
       const linkedSquare = this.portals[square].linkedTo;
 
       // Mark both squares as checked to prevent loops
@@ -50,12 +55,9 @@ export class PortalChess extends Chess {
         if (pieceAtLinked) this.remove(linkedSquare);
         this.put(tempPiece, linkedSquare);
 
-        // Calculate moves but don't recurse into portal traversal
-        const linkedMoves = this.moves({
-          square: linkedSquare,
-          verbose: true,
-          visited: { ...visited } // Clone visited state to isolate this calculation
-        });
+        // Get ONLY standard moves from the linked square position
+        // Don't recurse into further portal traversal
+        const linkedStandardMoves = super.moves({ square: linkedSquare, verbose: true });
 
         // Restore original board state
         this.remove(linkedSquare);
@@ -64,7 +66,7 @@ export class PortalChess extends Chess {
         }
 
         // Add these moves to our collection with special flag
-        for (const move of linkedMoves) {
+        for (const move of linkedStandardMoves) {
           standardMoves.push({
             ...move,
             simulPortalMove: true,
@@ -73,6 +75,12 @@ export class PortalChess extends Chess {
           });
         }
       }
+    }
+
+    // If this piece is already on a portal or has traversed one,
+    // skip all additional portal traversal logic
+    if (visited.hasTraversedPortal) {
+      return verbose ? standardMoves : standardMoves.map(m => m.san);
     }
 
     const isSquareInPiecePath = (from, to, checkSquare, pieceType) => {
@@ -216,137 +224,142 @@ export class PortalChess extends Chess {
     }
 
     // Continue with existing portal traversal logic
-    Object.entries(this.portals).forEach(([portalSquare, portal]) => {
-      if (visited.portals.has(portalSquare)) return;
+    if (!visited.hasTraversedPortal) { // Only process portal traversal if we haven't gone through one yet
+      Object.entries(this.portals).forEach(([portalSquare, portal]) => {
+        if (visited.portals.has(portalSquare)) return;
 
-      const allowedPieces = ['r', 'b', 'q', 'p'];
-      if (!allowedPieces.includes(piece.type)) return;
+        const allowedPieces = ['r', 'b', 'q', 'p'];
+        if (!allowedPieces.includes(piece.type)) return;
 
-      if (piece.type === 'p') {
-        const startRank = piece.color === 'w' ? '2' : '7';
-        if (square[1] !== startRank) return;
-      }
+        if (piece.type === 'p') {
+          const startRank = piece.color === 'w' ? '2' : '7';
+          if (square[1] !== startRank) return;
+        }
 
-      // Check if there's a piece of same color on either portal square
-      const portalExit = portal.linkedTo;
-      const pieceOnPortalEntry = this.get(portalSquare);
-      const pieceOnPortalExit = this.get(portalExit);
-
-      // Skip this portal if either portal square has a piece of the same color
-      if ((pieceOnPortalEntry && pieceOnPortalEntry.color === piece.color) ||
-        (pieceOnPortalExit && pieceOnPortalExit.color === piece.color)) {
-        return;
-      }
-
-      visited.portals.add(portalSquare);
-      visited.portalChain.push(portalSquare);
-
-      const movesToPortal = unblockedMoves.filter(move =>
-        (typeof move === 'string' ? move.slice(2, 4) : move.to) === portalSquare
-      );
-
-      if (movesToPortal.length > 0) {
+        // Check if there's a piece of same color on either portal square
         const portalExit = portal.linkedTo;
-        const moveToPortal = movesToPortal[0];
-
-        const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
-        const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
-
-        // Check if there's a piece on the portal exit
+        const pieceOnPortalEntry = this.get(portalSquare);
         const pieceOnPortalExit = this.get(portalExit);
 
-        // If there's a piece on the portal exit, only allow capture moves
-        if (pieceOnPortalExit && pieceOnPortalExit.color !== piece.color) {
-          // Can only capture the piece on the portal
-          portalMoves.push({
-            color: piece.color,
-            from: square,
-            to: portalExit,
-            piece: piece.type,
-            via: [...visited.portalChain].join('->'),
-            portal: true,
-            flags: 'p',
-            san: `P${[...visited.portalChain].join('->')}-${portalExit}`,
-            captured: pieceOnPortalExit.type,
-            lan: `${square}${portalExit}`,
-            after: this.fen(),
-            before: this.fen()
-          });
-
-          // Skip normal portal traversal logic
-          visited.portals.delete(portalSquare);
-          visited.portalChain.pop();
+        // Skip this portal if either portal square has a piece of the same color
+        if ((pieceOnPortalEntry && pieceOnPortalEntry.color === piece.color) ||
+          (pieceOnPortalExit && pieceOnPortalExit.color === piece.color)) {
           return;
         }
 
-        // Normal portal traversal logic continues if no piece on portal exit
-        const originalPiece = this.remove(square);
-        this.put(originalPiece, portalExit);
+        visited.portals.add(portalSquare);
+        visited.portalChain.push(portalSquare);
 
-        const exitMoves = this.moves({
-          square: portalExit,
-          verbose: true,
-          visited
-        });
+        const movesToPortal = unblockedMoves.filter(move =>
+          (typeof move === 'string' ? move.slice(2, 4) : move.to) === portalSquare
+        );
 
-        exitMoves.forEach(move => {
-          if (visited.blocks.has(move.to)) return;
+        if (movesToPortal.length > 0) {
+          const portalExit = portal.linkedTo;
+          const moveToPortal = movesToPortal[0];
 
-          const exitDx = Math.sign(move.to.charCodeAt(0) - portalExit.charCodeAt(0));
-          const exitDy = Math.sign(parseInt(move.to[1]) - parseInt(portalExit[1]));
+          const dx = Math.sign(moveToPortal.to.charCodeAt(0) - moveToPortal.from.charCodeAt(0));
+          const dy = Math.sign(parseInt(moveToPortal.to[1]) - parseInt(moveToPortal.from[1]));
 
-          let isValidDirection = false;
-          switch (piece.type) {
-            case 'r':
-              isValidDirection = (exitDx === dx && exitDy === 0) || (exitDx === 0 && exitDy === dy);
-              break;
-            case 'b':
-              isValidDirection = exitDx === dx && exitDy === dy;
-              break;
-            case 'q':
-              isValidDirection = exitDx === dx && exitDy === dy;
-              break;
-            case 'p':
-              isValidDirection = exitDx === 0 && exitDy === (piece.color === 'w' ? 1 : -1);
-              break;
+          // Check if there's a piece on the portal exit
+          const pieceOnPortalExit = this.get(portalExit);
+
+          // If there's a piece on the portal exit, only allow capture moves
+          if (pieceOnPortalExit && pieceOnPortalExit.color !== piece.color) {
+            // Can only capture the piece on the portal
+            portalMoves.push({
+              color: piece.color,
+              from: square,
+              to: portalExit,
+              piece: piece.type,
+              via: [...visited.portalChain].join('->'),
+              portal: true,
+              flags: 'p',
+              san: `P${[...visited.portalChain].join('->')}-${portalExit}`,
+              captured: pieceOnPortalExit.type,
+              lan: `${square}${portalExit}`,
+              after: this.fen(),
+              before: this.fen()
+            });
+
+            // Skip normal portal traversal logic
+            visited.portals.delete(portalSquare);
+            visited.portalChain.pop();
+            return;
           }
 
-          if (isValidDirection) {
-            const targetPiece = this.get(move.to);
-            if (!targetPiece || targetPiece.color !== piece.color) {
-              visited.blocks.add(move.to);
-              portalMoves.push({
-                color: piece.color,
-                from: square,
-                to: move.to,
-                piece: piece.type,
-                via: [...visited.portalChain].join('->'),
-                portal: true,
-                flags: 'p',
-                san: `P${[...visited.portalChain].join('->')}-${move.to}`,
-                captured: targetPiece ? targetPiece.type : undefined,
-                lan: `${square}${move.to}`,
-                after: this.fen(),
-                before: this.fen()
-              });
+          // Normal portal traversal logic continues if no piece on portal exit
+          const originalPiece = this.remove(square);
+          this.put(originalPiece, portalExit);
+
+          // Mark that we've traversed a portal
+          const modifiedVisited = { ...visited, hasTraversedPortal: true };
+
+          const exitMoves = this.moves({
+            square: portalExit,
+            verbose: true,
+            visited: modifiedVisited // Pass the modified visited state with hasTraversedPortal flag
+          });
+
+          exitMoves.forEach(move => {
+            if (visited.blocks.has(move.to)) return;
+
+            const exitDx = Math.sign(move.to.charCodeAt(0) - portalExit.charCodeAt(0));
+            const exitDy = Math.sign(parseInt(move.to[1]) - parseInt(portalExit[1]));
+
+            let isValidDirection = false;
+            switch (piece.type) {
+              case 'r':
+                isValidDirection = (exitDx === dx && exitDy === 0) || (exitDx === 0 && exitDy === dy);
+                break;
+              case 'b':
+                isValidDirection = exitDx === dx && exitDy === dy;
+                break;
+              case 'q':
+                isValidDirection = exitDx === dx && exitDy === dy;
+                break;
+              case 'p':
+                isValidDirection = exitDx === 0 && exitDy === (piece.color === 'w' ? 1 : -1);
+                break;
             }
-          }
-        });
 
-        this.remove(portalExit);
-        this.put(originalPiece, square);
-      }
+            if (isValidDirection) {
+              const targetPiece = this.get(move.to);
+              if (!targetPiece || targetPiece.color !== piece.color) {
+                visited.blocks.add(move.to);
+                portalMoves.push({
+                  color: piece.color,
+                  from: square,
+                  to: move.to,
+                  piece: piece.type,
+                  via: [...visited.portalChain].join('->'),
+                  portal: true,
+                  flags: 'p',
+                  san: `P${[...visited.portalChain].join('->')}-${move.to}`,
+                  captured: targetPiece ? targetPiece.type : undefined,
+                  lan: `${square}${move.to}`,
+                  after: this.fen(),
+                  before: this.fen()
+                });
+              }
+            }
+          });
 
-      visited.portals.delete(portalSquare);
-      visited.portalChain.pop();
-    });
+          this.remove(portalExit);
+          this.put(originalPiece, square);
+        }
+
+        visited.portals.delete(portalSquare);
+        visited.portalChain.pop();
+      });
+    }
 
     const allMoves = [...unblockedMoves, ...portalMoves];
     return verbose ? allMoves : allMoves.map(m => m.san);
   }
 
   move(moveObj) {
-
+    // Handle portal moves
     if (moveObj.portal) {
       const piece = this.get(moveObj.from);
       if (!piece) return null;
@@ -371,6 +384,37 @@ export class PortalChess extends Chess {
         piece: piece.type,
         portal: true,
         via: moveObj.via
+      };
+    }
+
+    // Handle simultaneous portal moves
+    if (moveObj.simulPortalMove) {
+      // Get the piece from the original position
+      const piece = this.get(moveObj.originalFrom);
+      if (!piece) return null;
+
+      // Validate the move
+      const moves = this.moves({ square: moveObj.originalFrom, verbose: true });
+      const isValid = moves.some(move =>
+        move.simulPortalMove &&
+        move.to === moveObj.to &&
+        move.simulFrom === moveObj.simulFrom
+      );
+
+      if (!isValid) return null;
+
+      // Execute the move (remove from original square, place on target square)
+      this.remove(moveObj.originalFrom);
+      this.put(piece, moveObj.to);
+      this._turn = this._turn === 'w' ? 'b' : 'w';
+
+      return {
+        color: piece.color,
+        from: moveObj.originalFrom,
+        to: moveObj.to,
+        piece: piece.type,
+        simulPortalMove: true,
+        simulFrom: moveObj.simulFrom
       };
     }
 
