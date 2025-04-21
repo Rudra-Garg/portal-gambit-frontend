@@ -15,10 +15,12 @@ const ChatComponent = ({
     remoteAudioRef
 }) => {
     return (
-        <div className="chat-container bg-indigo-100">
-            <div className="chat-header bg-indigo-100">
-                <h3>Game Chat</h3>
-                <div className="voice-chat-controls flex items-center space-x-2 bg-indigo-100">
+        <div className="chat-container bg-indigo-100 border border-indigo-200">
+            <div className="chat-header bg-indigo-100 border-b border-indigo-200 flex justify-between items-center p-2">
+                <div className="text-m text-indigo-700 font-medium">
+                    Game Chat
+                </div>
+                <div className="voice-chat-controls flex items-center space-x-2">
                     <button
                         onClick={toggleVoiceChat}
                         className={`voice-chat-toggle px-3 py-1.5 rounded-md text-sm font-medium transition-all ${voiceChatEnabled
@@ -107,13 +109,13 @@ const ChatComponent = ({
                     ))
                 )}
             </div>
-            <form onSubmit={sendMessage} className="chat-input-form">
+            <form onSubmit={sendMessage} className="chat-input-form border-t border-indigo-200">
                 <input
                     type="text"
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="chat-input"
+                    className="chat-input border border-indigo-200 rounded-md px-3 py-2 w-full focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
                 <button type="submit" className="chat-send-button">
                     Send
@@ -147,4 +149,4 @@ ChatComponent.propTypes = {
     remoteAudioRef: PropTypes.object.isRequired
 };
 
-export default ChatComponent; 
+export default ChatComponent;

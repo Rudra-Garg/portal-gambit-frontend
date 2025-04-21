@@ -244,6 +244,7 @@ const PortalChessGame = () => {
                     setPortalMode={setPortalMode}
                     isMyTurn={isMyTurn}
                     exit={exitGame}
+                    portalCount={gameState?.portal_count || 0}
                 />
                 <ChatComponent
                     chatMessages={chatMessages}

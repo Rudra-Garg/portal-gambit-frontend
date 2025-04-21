@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 
-const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit }) => {
+const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit, portalCount }) => {
   const getMoveDisplay = useCallback((move) => {
     if (!move) return '';
   
@@ -46,16 +46,16 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
   }, []);
 
   return (
-    <div className="bg-indigo-100 flex-grow mb-2 rounded-lg border border-indigo-200 flex flex-col overflow-hidden"      style={{ maxHeight: "471px" }}>
-      <div className="relative flex justify-end items-center p-2 border-b border-gray-200 flex-shrink-0 space-x-2"> 
-        <div className="absolute left-1/2 transform -translate-x-1/2 text-m text-center text-indigo-800 font-medium pointer-events-none"> 
+    <div className="bg-indigo-100 flex-grow mb-2 rounded-lg border border-indigo-200 flex flex-col overflow-hidden" style={{ maxHeight: "471px" }}>
+      <div className="relative flex justify-end items-center p-2 border-b border-indigo-200 flex-shrink-0 space-x-2">
+        <div className="absolute left-4 text-m text-left text-indigo-700 font-medium pointer-events-none">
           Moves
         </div>
         <div className="flex items-center space-x-2 flex-shrink-0 z-10">
           <button
             onClick={() => setPortalMode(!portalMode)}
-            className={`bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center ${portalMode ? 'ring-2 ring-blue-300' : ''} disabled:opacity-50 disabled:cursor-not-allowed`} 
-            disabled={!isMyTurn()}
+            className={`bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm transition-colors duration-150 flex items-center ${portalMode ? 'ring-2 ring-blue-300' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
+            disabled={!isMyTurn() || portalCount === 0}
           >
             {portalMode ? 'Cancel Portal' : 'Place Portal'}
           </button>
@@ -73,7 +73,7 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
       </div>
 
 
-      <div className="overflow-y-auto p-3 flex-grow border border-indigo-200 bg-indigo-100">
+      <div className="overflow-y-auto p-3 flex-grow bg-indigo-100">
         {moveHistory.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-400 italic text-sm gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -144,7 +144,6 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
           </div>
         )}
       </div>
-
     </div>
   );
 };
@@ -162,7 +161,8 @@ GameHistory.propTypes = {
   portalMode: PropTypes.bool.isRequired,
   setPortalMode: PropTypes.func.isRequired,
   isMyTurn: PropTypes.func.isRequired,
-  exit: PropTypes.func.isRequired
+  exit: PropTypes.func.isRequired,
+  portalCount: PropTypes.number.isRequired
 };
 
 export default GameHistory;

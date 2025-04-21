@@ -64,11 +64,12 @@ export const useRematch = (
             setBlackTime(initialTime);
             // GameArchived state should be handled by the lifecycle hook reacting to DB changes
 
-            console.log("Rematch: Successfully updated Firebase for rematch.");
+            // console.log("Rematch: Successfully updated Firebase for rematch.");
 
         } catch (error) {
-            console.error('Error starting rematch:', error);
+            // console.error('Error starting rematch:', error);
         }
+
     }, [gameId, gameState, setShowGameEndPopup, setGameEndDetails, setWhiteTime, setBlackTime]);
 
     // Listener for incoming rematch requests
@@ -117,7 +118,7 @@ export const useRematch = (
         const newNotificationRef = push(notificationRef); // Use push for unique key
         try {
             await set(newNotificationRef, notification);
-            console.log("Rematch request sent.");
+            // console.log("Rematch request sent.");
             // Optionally close the popup or show a waiting message here
         } catch (error) {
             console.error("Error sending rematch request:", error);

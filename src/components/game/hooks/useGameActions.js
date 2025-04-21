@@ -36,12 +36,11 @@ export const useGameActions = (
         if (!areBothPlayersJoined || !areBothPlayersJoined()) return false;
         if (!isMyTurn || !isMyTurn()) return false;
         if (gameState?.status === 'archived' || gameState?.status === 'archiving' || isGameArchived) {
-            console.log('Game is archived or archiving, moves disabled');
             return false;
         }
         if (isArchivingLocally) {
-             console.log('Local archiving in progress, moves disabled');
-             return false;
+
+            return false;
         }
 
         if (gameState?.current_turn === 'white' && whiteTime <= 0) return false;
@@ -52,27 +51,51 @@ export const useGameActions = (
             const newGame = new PortalChess(currentFen, gameState?.portal_count);
             newGame.portals = { ...game.portals };
 
-            const moves = newGame.moves({ square: sourceSquare, verbose: true });
-            const portalMove = moves.find(move => move.portal && move.to === targetSquare);
+            // Get all valid moves for the source square
+            const validMoves = newGame.moves({ square: sourceSquare, verbose: true });
+
+            // Find a valid move that matches our target square
+            const validMove = validMoves.find(move => move.to === targetSquare);
+
+            if (!validMove) {
+                console.log('Invalid move:', sourceSquare, 'to', targetSquare);
+                return false;
+            }
+
+            // Now execute the move with appropriate parameters
             let moveResult;
-            if (portalMove) {
-                moveResult = newGame.move({ from: sourceSquare, to: targetSquare, via: portalMove.via, portal: true });
+            if (validMove.portal) {
+                moveResult = newGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    via: validMove.via,
+                    portal: true
+                });
+            } else if (validMove.simulPortalMove) {
+                // Handle simultaneous portal moves
+                moveResult = newGame.move({
+                    from: sourceSquare,
+                    to: targetSquare,
+                    simulPortalMove: true,
+                    simulFrom: validMove.simulFrom,
+                    originalFrom: sourceSquare
+                });
             } else {
                 moveResult = newGame.move({ from: sourceSquare, to: targetSquare, promotion: 'q' });
             }
 
             if (moveResult) {
                 const cleanMove = {
-                     captured: moveResult.captured || null,
-                     promotion: moveResult.promotion || null,
-                     from: moveResult.from,
-                     to: moveResult.to,
-                     piece: moveResult.piece,
-                     color: moveResult.color,
-                     flags: moveResult.flags || '',
-                     san: moveResult.san || '',
-                     via: moveResult.via || null,
-                     portal: moveResult.portal || false
+                    captured: moveResult.captured || null,
+                    promotion: moveResult.promotion || null,
+                    from: moveResult.from,
+                    to: moveResult.to,
+                    piece: moveResult.piece,
+                    color: moveResult.color,
+                    flags: moveResult.flags || '',
+                    san: moveResult.san || '',
+                    via: moveResult.via || null,
+                    portal: moveResult.portal || false
                 };
                 const updatedHistory = [...(moveHistory || []), cleanMove];
                 const newTurn = gameState.current_turn === 'white' ? 'black' : 'white';
@@ -105,7 +128,6 @@ export const useGameActions = (
 
                 const gameStatus = newGame.isGameOver();
                 if (gameStatus.over) {
-                    console.log("Game over detected by move:", gameStatus.reason);
                     const gameDetails = {
                         winner: gameStatus.winner,
                         reason: gameStatus.reason
@@ -118,30 +140,27 @@ export const useGameActions = (
                     };
 
                     runTransaction(gameRef, (currentData) => {
-                         if (!currentData || currentData.status !== 'active') return undefined;
-                         return {
-                             ...currentData,
-                             ...updatesForFirebase,
-                             status: 'finished',
-                             winner: gameStatus.winner,
-                             reason: gameStatus.reason
-                         };
+                        if (!currentData || currentData.status !== 'active') return undefined;
+                        return {
+                            ...currentData,
+                            ...updatesForFirebase,
+                            status: 'finished',
+                            winner: gameStatus.winner,
+                            reason: gameStatus.reason
+                        };
                     }).then(async (transactionResult) => {
                         if (transactionResult.committed) {
-                             console.log("Move resulted in game end. Set status to finished.");
+
                             setGameEndDetails(gameDetails);
                             setShowGameEndPopup(true);
                             push(movesRef, moveDataWithTimestamp).then(() => {
                                 initiateArchiving(currentDataForArchive, gameDetails);
                             }).catch(error => {
-                                 console.error("Error pushing final move to history before archiving:", error);
-                                 initiateArchiving(currentDataForArchive, gameDetails);
+
+                                initiateArchiving(currentDataForArchive, gameDetails);
                             });
-                        } else {
-                            console.log("Move game end transaction aborted (already ended?).");
                         }
                     }).catch(error => {
-                        console.error("Error during move game end transaction:", error);
                     });
 
                 } else {
@@ -149,14 +168,13 @@ export const useGameActions = (
                         update(ref(database, `games/${gameId}`), updatesForFirebase),
                         push(movesRef, moveDataWithTimestamp)
                     ]).catch(error => {
-                         console.error("Error updating game state or pushing move to history:", error);
+
                     });
                 }
                 return true;
             }
             return false;
         } catch (error) {
-            console.error('Error making move:', error);
             return false;
         }
     }, [
@@ -168,7 +186,6 @@ export const useGameActions = (
 
     const handleSquareClick = useCallback((square) => {
         if (gameState?.status === 'archived' || gameState?.status === 'archiving' || isGameArchived || isArchivingLocally) {
-            console.log('Game is archived or archiving, clicks disabled');
             return;
         }
 
@@ -184,8 +201,8 @@ export const useGameActions = (
             }
         } else {
             if (!isMyTurn || !isMyTurn()) {
-                 console.log('Not your turn to place a portal');
-                 return;
+
+                return;
             }
             if (!portalStart) {
                 if (game.get(square)) {
@@ -202,7 +219,7 @@ export const useGameActions = (
                     alert("Cannot place portal end on an occupied square!");
                     return;
                 }
-                 if (game.portals[square]) {
+                if (game.portals[square]) {
                     alert("Cannot place portal end on an existing portal!");
                     return;
                 }
@@ -256,7 +273,6 @@ export const useGameActions = (
                     setPortalStart(null);
                     setPortalMode(false);
                 } catch (error) {
-                    console.error('Portal placement error:', error);
                     alert(`Portal placement failed: ${error.message || `Maximum number of portals (${gameState?.portal_count}) reached!`}`);
                     setPortalStart(null);
                     setPortalMode(false);
@@ -278,4 +294,4 @@ export const useGameActions = (
         selectedSquare,
         setSelectedSquare
     };
-}; 
+};

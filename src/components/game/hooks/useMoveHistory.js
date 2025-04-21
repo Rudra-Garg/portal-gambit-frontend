@@ -15,12 +15,12 @@ export const useMoveHistory = (gameId) => {
             moveHistoryRef.current = [];
             lastProcessedMoveKeyRef.current = null;
             setMoveHistory([]);
-            console.log("useMoveHistory: No gameId provided, reset state.");
+            // console.log("useMoveHistory: No gameId provided, reset state.");
             return;
         }
 
         // Initial setup for a new gameId
-        console.log(`useMoveHistory: Setting up for gameId: ${gameId}`);
+        // console.log(`useMoveHistory: Setting up for gameId: ${gameId}`);
         moveHistoryRef.current = [];
         lastProcessedMoveKeyRef.current = null;
         setMoveHistory([]);
@@ -31,16 +31,16 @@ export const useMoveHistory = (gameId) => {
         const listener = (snapshot) => {
             // If resetting is in progress, ignore this snapshot to avoid processing old data
             if (isResettingRef.current) {
-                console.log("useMoveHistory: Currently resetting, skipping snapshot.");
+                // console.log("useMoveHistory: Currently resetting, skipping snapshot.");
                 return;
             }
 
             const data = snapshot.val();
             if (!data) {
-                console.log("useMoveHistory: Game data snapshot is null.");
+                // console.log("useMoveHistory: Game data snapshot is null.");
                 // Consider if a reset is needed here too, e.g., if game was deleted
                 if (moveHistoryRef.current.length > 0) {
-                    console.log("useMoveHistory: Game data became null, resetting local history.");
+                    // console.log("useMoveHistory: Game data became null, resetting local history.");
                     moveHistoryRef.current = [];
                     lastProcessedMoveKeyRef.current = null;
                     setMoveHistory([]);
@@ -56,11 +56,11 @@ export const useMoveHistory = (gameId) => {
             const isLastMoveCleared = lastMove == null; // Checks for both null and undefined
 
             // Log the conditions being checked for reset
-            // console.log(`useMoveHistory: Reset check - isStartingPos: ${isStartingPos}, isLastMoveCleared:
+            // // console.log(`useMoveHistory: Reset check - isStartingPos: ${isStartingPos}, isLastMoveCleared:
             // ${isLastMoveCleared}, historyLength: ${moveHistoryRef.current.length}`);
 
             if (isStartingPos && isLastMoveCleared && moveHistoryRef.current.length > 0) {
-                console.log("useMoveHistory: *** RESET CONDITION MET *** Clearing history.");
+                // console.log("useMoveHistory: *** RESET CONDITION MET *** Clearing history.");
                 isResettingRef.current = true; // Set flag before async operations
                 moveHistoryRef.current = [];
                 lastProcessedMoveKeyRef.current = null;
@@ -79,12 +79,12 @@ export const useMoveHistory = (gameId) => {
                 if (currentMoveKey !== lastProcessedMoveKeyRef.current) {
                     // Ensure we don't append during or immediately after a reset
                     if (!isResettingRef.current) {
-                        console.log("useMoveHistory: Appending new move:", lastMove.san || 'Portal Move', `(Key: ${currentMoveKey})`);
+                        // console.log("useMoveHistory: Appending new move:", lastMove.san || 'Portal Move', `(Key: ${currentMoveKey})`);
                         moveHistoryRef.current = [...moveHistoryRef.current, lastMove];
                         lastProcessedMoveKeyRef.current = currentMoveKey;
                         setMoveHistory([...moveHistoryRef.current]);
                     } else {
-                        console.log("useMoveHistory: Skipping append due to recent reset flag.");
+                        // console.log("useMoveHistory: Skipping append due to recent reset flag.");
                     }
                 }
             }
@@ -100,7 +100,7 @@ export const useMoveHistory = (gameId) => {
 
         // Cleanup
         return () => {
-            console.log(`useMoveHistory: Cleaning up listener for gameId: ${gameId}`);
+            // console.log(`useMoveHistory: Cleaning up listener for gameId: ${gameId}`);
             unsubscribe();
         };
 

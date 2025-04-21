@@ -1,4 +1,4 @@
-import {BACKEND_URL} from "../config.js";
+import { BACKEND_URL } from "../config.js";
 
 const fetchProfileDetails = async (uid) => {
     try {
@@ -22,7 +22,6 @@ const fetchProfileDetails = async (uid) => {
         const profileData = await response.json();
         return profileData;
     } catch (error) {
-        console.error('Error fetching profile details:', error);
         return null;
     }
 };
