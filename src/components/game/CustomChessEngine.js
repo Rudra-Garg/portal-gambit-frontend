@@ -28,8 +28,14 @@ export class PortalChess extends Chess {
 
     if (!piece) return standardMoves;
 
+    // Check if this piece is on a portal - if so, it's already using portal capabilities
+    const isOnPortal = this.portals[square] !== undefined;
+
     // Handle piece on portal (simultaneous existence)
-    if (this.portals[square] && !visited.simulChecked.has(square)) {
+    if (isOnPortal && !visited.simulChecked.has(square)) {
+      // Mark that this piece has already traversed a portal
+      visited.hasTraversedPortal = true;
+
       const linkedSquare = this.portals[square].linkedTo;
 
       // Mark both squares as checked to prevent loops
@@ -49,12 +55,9 @@ export class PortalChess extends Chess {
         if (pieceAtLinked) this.remove(linkedSquare);
         this.put(tempPiece, linkedSquare);
 
-        // Calculate moves but don't recurse into portal traversal
-        const linkedMoves = this.moves({
-          square: linkedSquare,
-          verbose: true,
-          visited: { ...visited } // Clone visited state to isolate this calculation
-        });
+        // Get ONLY standard moves from the linked square position
+        // Don't recurse into further portal traversal
+        const linkedStandardMoves = super.moves({ square: linkedSquare, verbose: true });
 
         // Restore original board state
         this.remove(linkedSquare);
@@ -63,7 +66,7 @@ export class PortalChess extends Chess {
         }
 
         // Add these moves to our collection with special flag
-        for (const move of linkedMoves) {
+        for (const move of linkedStandardMoves) {
           standardMoves.push({
             ...move,
             simulPortalMove: true,
@@ -72,6 +75,12 @@ export class PortalChess extends Chess {
           });
         }
       }
+    }
+
+    // If this piece is already on a portal or has traversed one,
+    // skip all additional portal traversal logic
+    if (visited.hasTraversedPortal) {
+      return verbose ? standardMoves : standardMoves.map(m => m.san);
     }
 
     const isSquareInPiecePath = (from, to, checkSquare, pieceType) => {
@@ -128,7 +137,7 @@ export class PortalChess extends Chess {
       }
     };
 
-    const blockedMoves = visited.hasTraversedPortal ? [] : standardMoves.filter(move => {
+    const blockedMoves = standardMoves.filter(move => {
       const from = typeof move === 'string' ? move.slice(0, 2) : move.from;
       const to = typeof move === 'string' ? move.slice(2, 4) : move.to;
       return Object.keys(this.portals).some(portalSquare =>
