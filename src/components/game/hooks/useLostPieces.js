@@ -1,19 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
 
-/**
- * Custom hook for tracking lost chess pieces
- * @param {Object} game - The chess game instance
- * @returns {[Object, Function]} An array with lost pieces object and update function
- */
 export const useLostPieces = (game) => {
+  // Initialize with empty arrays
   const [lostPieces, setLostPieces] = useState({
     white: [],
     black: []
   });
 
-  // Memoize the calculation function with useCallback
+  // Define the calculation function
   const calculateLostPieces = useCallback((currentGame) => {
-    if (!currentGame) return { white: [], black: [] };
+    console.log('[DEBUG][LostPieces] Calculating lost pieces', { 
+      gameExists: !!currentGame,
+      gameType: currentGame?.constructor?.name 
+    });
+    
+    if (!currentGame || typeof currentGame.board !== 'function') {
+      console.error('[LostPieces] Invalid game object:', currentGame);
+      return { white: [], black: [] };
+    }
 
     // Define the starting pieces for a standard chess game
     const startingPieces = {
@@ -27,60 +31,112 @@ export const useLostPieces = (game) => {
       black: { p: 0, n: 0, b: 0, r: 0, q: 0, k: 0 }
     };
 
-    // Get the current board state
-    const board = currentGame.board();
-    
-    // Count all pieces currently on the board
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const piece = board[row][col];
-        if (piece) {
-          const color = piece.color === 'w' ? 'white' : 'black';
-          currentPieces[color][piece.type]++;
+    try {
+      // Get the current board state
+      const board = currentGame.board();
+      
+      // Make sure the board is properly structured
+      if (!Array.isArray(board) || board.length !== 8) {
+        throw new Error('Invalid board structure');
+      }
+      
+      // Count all pieces currently on the board
+      let pieceCount = 0;
+      
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const piece = board[row][col];
+          if (piece) {
+            pieceCount++;
+            const color = piece.color === 'w' ? 'white' : 'black';
+            const type = piece.type;
+            currentPieces[color][type]++;
+          }
         }
       }
+      
+      console.log('[DEBUG][LostPieces] Current pieces on board:', {
+        total: pieceCount,
+        white: currentPieces.white,
+        black: currentPieces.black
+      });
+
+      // Calculate lost pieces
+      const lost = {
+        white: [],
+        black: []
+      };
+
+      // For each color, determine which pieces are lost
+      ['white', 'black'].forEach(color => {
+        for (const pieceType in startingPieces[color]) {
+          const expectedCount = startingPieces[color][pieceType];
+          const actualCount = currentPieces[color][pieceType];
+          const lostCount = Math.max(0, expectedCount - actualCount);
+          
+          for (let i = 0; i < lostCount; i++) {
+            lost[color].push(pieceType);
+          }
+        }
+      });
+
+      console.log('[DEBUG][LostPieces] Lost pieces calculation result:', {
+        white: lost.white.length > 0 ? lost.white : 'none',
+        black: lost.black.length > 0 ? lost.black : 'none'
+      });
+      
+      return lost;
+    } catch (error) {
+      console.error('[LostPieces] Error calculating lost pieces:', error);
+      return { white: [], black: [] };
     }
-
-    // Calculate lost pieces
-    const lost = {
-      white: [],
-      black: []
-    };
-
-    // For each color, determine which pieces are lost
-    ['white', 'black'].forEach(color => {
-      for (const pieceType in startingPieces[color]) {
-        const lostCount = startingPieces[color][pieceType] - currentPieces[color][pieceType];
-        for (let i = 0; i < lostCount; i++) {
-          lost[color].push(pieceType);
-        }
-      }
-    });
-
-    return lost;
   }, []);
 
-  // Memoize the update function with useCallback
+  // Function to update lost pieces
   const updateLostPieces = useCallback((currentGame) => {
+    if (!currentGame) return lostPieces;
+    
+    console.log('[DEBUG][LostPieces] Updating lost pieces with game:', {
+      type: currentGame.constructor?.name,
+      fen: currentGame.fen?.()
+    });
+    
     const newLostPieces = calculateLostPieces(currentGame);
     
-    // Only update state if lost pieces have changed
     setLostPieces(prevLostPieces => {
-      if (JSON.stringify(prevLostPieces) !== JSON.stringify(newLostPieces)) {
+      // Check if there's a real change
+      const hasChanged = 
+        JSON.stringify(prevLostPieces.white) !== JSON.stringify(newLostPieces.white) ||
+        JSON.stringify(prevLostPieces.black) !== JSON.stringify(newLostPieces.black);
+      
+      console.log('[DEBUG][LostPieces] State update:', hasChanged ? 'Changed!' : 'No change');
+      
+      if (hasChanged) {
         return newLostPieces;
       }
       return prevLostPieces;
     });
-
+    
     return newLostPieces;
-  }, [calculateLostPieces]);
+  }, [calculateLostPieces, lostPieces]);
 
-  // Include updateLostPieces in the dependency array
+  // Update when the game changes
   useEffect(() => {
-    if (game) {
+    if (game && typeof game.board === 'function') {
+      console.log('[DEBUG][LostPieces] Game object changed, updating lost pieces');
       updateLostPieces(game);
     }
   }, [game, updateLostPieces]);
+
+  // IMPORTANT: Update when a move is made
+  // This will force a recalculation when the FEN changes
+  useEffect(() => {
+    if (game && typeof game.fen === 'function') {
+      const fen = game.fen();
+      console.log('[DEBUG][LostPieces] FEN changed:', fen?.substring(0, 20) + '...');
+      updateLostPieces(game);
+    }
+  }, [game?.fen?.(), updateLostPieces]);
 
   return [lostPieces, updateLostPieces];
 };

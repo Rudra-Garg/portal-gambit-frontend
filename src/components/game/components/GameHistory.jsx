@@ -4,17 +4,46 @@ import PropTypes from 'prop-types';
 const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, exit }) => {
   const getMoveDisplay = useCallback((move) => {
     if (!move) return '';
-
-    if (move.portal) {
-      return `Portal ${move.from}↔${move.to}`;
+  
+    // For portal creation moves, SHOW where the portal was created
+    if (move.via && move.portal) {
+      const piece = move.piece ? move.piece.toUpperCase() : '';
+      const from = move.from || '';
+      const to = move.to || '';
+      
+      if (from && to) {
+        return `${piece} ${from}→${to}`;
+      } else {
+        return `Portal Move`; // Fallback if coordinates are missing
+      }
     }
-    if (move.via) {
-      return `${move.piece.toUpperCase()}${move.from}→${move.via}→${move.to}`;
+    else if (move.portal) {
+      // Make sure from and to are defined
+      if (move.from && move.to) {
+        return `Portal ${move.from}↔${move.to}`;
+      } else {
+        return 'Portal Created'; // Fallback if coordinates are missing
+      }
     }
-    return move.san || `${move.piece.toUpperCase()}${move.from}-${move.to}`;
+    
+    // For moves using a portal (via), now show piece type and coordinates
+    // For regular moves, use standard algebraic notation
+    if (move.san) {
+      return move.san;
+    }
+    
+    // Final fallback with safety checks
+    const piece = move.piece ? move.piece.toUpperCase() : '';
+    const from = move.from || '';
+    const to = move.to || '';
+    
+    if (!from || !to) {
+      // Changed fallback message to be more generic
+      return piece ? `${piece} moved` : 'Move made';
+    }
+    
+    return `${piece}${from}-${to}`;
   }, []);
-
-  const formattedDate = new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
 
   return (
     <div className="bg-indigo-100 flex-grow mb-2 rounded-lg border border-indigo-200 flex flex-col overflow-hidden"      style={{ maxHeight: "471px" }}>
@@ -83,25 +112,27 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
 
                     <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-1">
                       {whiteMove && (
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${whiteMove.portal
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${whiteMove.portal || whiteMove.via
                           ? 'bg-gradient-to-bl from-green-200 to-green-100 border border-green-200'
                           : 'bg-gradient-to-bl from-blue-200 to-blue-100 border border-blue-200'
                           } shadow-sm transition-all hover:shadow-md`}>
-                          <div className={`h-3 w-3 rounded-full ${whiteMove.portal ? 'bg-green-500' : 'bg-blue-500'} flex-shrink-0`}></div>
-                          <div className={`${whiteMove.portal ? 'text-green-800' : 'text-blue-800'} text-sm font-medium`}>
+                          <div className={`h-3 w-3 rounded-full ${whiteMove.portal || whiteMove.via ? 'bg-green-500' : 'bg-blue-500'} flex-shrink-0`}></div>
+                          <div className={`${whiteMove.portal || whiteMove.via ? 'text-green-800' : 'text-blue-800'} text-sm font-medium`}>
                             {getMoveDisplay(whiteMove)}
+                           
                           </div>
                         </div>
                       )}
 
                       {blackMove && (
-                        <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${blackMove.portal
+                        <div className={`flex items-center gap-2 px-3 py-2 rounded-md ${blackMove.portal || blackMove.via
                           ? 'bg-gradient-to-bl from-green-200 to-green-100 border border-green-200'
                           : 'bg-gradient-to-bl from-purple-200 to-purple-100 border border-purple-200'
                           } shadow-sm transition-all hover:shadow-md`}>
-                          <div className={`h-3 w-3 rounded-full ${blackMove.portal ? 'bg-green-500' : 'bg-purple-500'} flex-shrink-0`}></div>
-                          <div className={`${blackMove.portal ? 'text-green-800' : 'text-purple-800'} text-sm font-medium`}>
+                          <div className={`h-3 w-3 rounded-full ${blackMove.portal || blackMove.via ? 'bg-green-500' : 'bg-purple-500'} flex-shrink-0`}></div>
+                          <div className={`${blackMove.portal || blackMove.via ? 'text-green-800' : 'text-purple-800'} text-sm font-medium`}>
                             {getMoveDisplay(blackMove)}
+                         
                           </div>
                         </div>
                       )}
@@ -114,7 +145,6 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
         )}
       </div>
 
-      
     </div>
   );
 };
@@ -122,8 +152,8 @@ const GameHistory = ({ moveHistory = [], portalMode, setPortalMode, isMyTurn, ex
 GameHistory.propTypes = {
   moveHistory: PropTypes.arrayOf(PropTypes.shape({
     piece: PropTypes.string,
-    from: PropTypes.string.isRequired,
-    to: PropTypes.string.isRequired,
+    from: PropTypes.string,
+    to: PropTypes.string,
     captured: PropTypes.string,
     portal: PropTypes.bool,
     via: PropTypes.string,

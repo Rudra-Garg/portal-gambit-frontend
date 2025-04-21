@@ -84,17 +84,21 @@ const PortalChessGame = () => {
         setGameEndDetails,
         setShowGameEndPopup
     );
-
+    
     // 3. Effect to sync Lost Pieces with Game State
+    const [lastFen, setLastFen] = useState('');
     useEffect(() => {
         if (game && updateLostPieces) {
+            console.log('[DEBUG][PortalChessGame] Updating lost pieces', {
+                gameExists: !!game, 
+                movesMade: game?.history?.()?.length || 0,
+                fen: game?.fen?.()
+            });
+            
+            // Force update when moves are made
             updateLostPieces(game);
         }
-        // Add game.fen() to dependencies if game object identity might not change reliably
-        // This ensures updateLostPieces runs even if the game object instance is the same
-        // but its internal state (FEN) has changed. For rematch, the instance *should*
-        // change because useGameState calls `setGame(new PortalChess(...))`.
-    }, [game, updateLostPieces]);
+    }, [game, game?.fen?.(), updateLostPieces]);
 
     // Other dependent hooks
     const moveHistory = useMoveHistory(gameId);
