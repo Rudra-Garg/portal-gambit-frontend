@@ -89,11 +89,7 @@ const PortalChessGame = () => {
     const [lastFen, setLastFen] = useState('');
     useEffect(() => {
         if (game && updateLostPieces) {
-            console.log('[DEBUG][PortalChessGame] Updating lost pieces', {
-                gameExists: !!game, 
-                movesMade: game?.history?.()?.length || 0,
-                fen: game?.fen?.()
-            });
+          
             
             // Force update when moves are made
             updateLostPieces(game);

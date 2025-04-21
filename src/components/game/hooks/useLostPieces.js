@@ -9,11 +9,6 @@ export const useLostPieces = (game) => {
 
   // Define the calculation function
   const calculateLostPieces = useCallback((currentGame) => {
-    console.log('[DEBUG][LostPieces] Calculating lost pieces', { 
-      gameExists: !!currentGame,
-      gameType: currentGame?.constructor?.name 
-    });
-    
     if (!currentGame || typeof currentGame.board !== 'function') {
       console.error('[LostPieces] Invalid game object:', currentGame);
       return { white: [], black: [] };
@@ -54,12 +49,6 @@ export const useLostPieces = (game) => {
           }
         }
       }
-      
-      console.log('[DEBUG][LostPieces] Current pieces on board:', {
-        total: pieceCount,
-        white: currentPieces.white,
-        black: currentPieces.black
-      });
 
       // Calculate lost pieces
       const lost = {
@@ -79,12 +68,6 @@ export const useLostPieces = (game) => {
           }
         }
       });
-
-      console.log('[DEBUG][LostPieces] Lost pieces calculation result:', {
-        white: lost.white.length > 0 ? lost.white : 'none',
-        black: lost.black.length > 0 ? lost.black : 'none'
-      });
-      
       return lost;
     } catch (error) {
       console.error('[LostPieces] Error calculating lost pieces:', error);
@@ -96,10 +79,6 @@ export const useLostPieces = (game) => {
   const updateLostPieces = useCallback((currentGame) => {
     if (!currentGame) return lostPieces;
     
-    console.log('[DEBUG][LostPieces] Updating lost pieces with game:', {
-      type: currentGame.constructor?.name,
-      fen: currentGame.fen?.()
-    });
     
     const newLostPieces = calculateLostPieces(currentGame);
     
@@ -109,7 +88,6 @@ export const useLostPieces = (game) => {
         JSON.stringify(prevLostPieces.white) !== JSON.stringify(newLostPieces.white) ||
         JSON.stringify(prevLostPieces.black) !== JSON.stringify(newLostPieces.black);
       
-      console.log('[DEBUG][LostPieces] State update:', hasChanged ? 'Changed!' : 'No change');
       
       if (hasChanged) {
         return newLostPieces;
@@ -123,7 +101,6 @@ export const useLostPieces = (game) => {
   // Update when the game changes
   useEffect(() => {
     if (game && typeof game.board === 'function') {
-      console.log('[DEBUG][LostPieces] Game object changed, updating lost pieces');
       updateLostPieces(game);
     }
   }, [game, updateLostPieces]);
@@ -133,7 +110,6 @@ export const useLostPieces = (game) => {
   useEffect(() => {
     if (game && typeof game.fen === 'function') {
       const fen = game.fen();
-      console.log('[DEBUG][LostPieces] FEN changed:', fen?.substring(0, 20) + '...');
       updateLostPieces(game);
     }
   }, [game?.fen?.(), updateLostPieces]);
