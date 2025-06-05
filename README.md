@@ -16,6 +16,14 @@ Whether you're a chess aficionado looking for a fresh challenge, a strategy game
 
 ---
 
+## 🖼️ Demo GIFs
+**Landing Page**
+![Landing](https://github.com/Rudra-Garg/portal-gambit-frontend/blob/main/media/Landing.gif)
+
+**Profile and Game Page**
+![game](https://github.com/Rudra-Garg/portal-gambit-frontend/blob/main/media/game.gif)
+
+---
 ## 🚀 Project Highlights 
 
 *   **🥇 Innovative Gameplay Logic:**
@@ -83,14 +91,7 @@ Whether you're a chess aficionado looking for a fresh challenge, a strategy game
 
 ---
 
-## 🖼️ Demo GIFs
-**Landing Page**
-![Landing](https://github.com/Rudra-Garg/portal-gambit-frontend/blob/main/media/Landing.gif)
 
-**Profile and Game Page**
-![game](https://github.com/Rudra-Garg/portal-gambit-frontend/blob/main/media/game.gif)
-
----
 
 ## 📁 Project Structure
 
