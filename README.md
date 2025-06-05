@@ -1,6 +1,6 @@
 # Portal Gambit: Frontend - A Revolutionary Chess Experience ♟️🌀
 
-**Live Demo:** [(portal-gambit.web.app) ](https://portal-gambit.web.app/) 
+**Live Demo:** [portal-gambit.web.app ](https://portal-gambit.web.app/) 
 
 **Backend Repository:**  [github.com/Rudra-Garg/portal-gambit-backend](https://github.com/Rudra-Garg/Portal-Gambit-Backend)
 
